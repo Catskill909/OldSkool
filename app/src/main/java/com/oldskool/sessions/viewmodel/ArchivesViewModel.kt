@@ -20,10 +20,11 @@ class ArchivesViewModel : ViewModel() {
     private fun fetchWordPressPosts() {
         viewModelScope.launch {
             try {
-                val posts = repository.getPosts()
+                val posts = repository.getPostsPage(1)
                 _wordPressData.value = posts
             } catch (e: Exception) {
                 // Handle error
+                _wordPressData.value = emptyList()
             }
         }
     }

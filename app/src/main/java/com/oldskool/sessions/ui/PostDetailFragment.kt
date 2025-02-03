@@ -55,10 +55,11 @@ class PostDetailFragment : Fragment() {
 
         // Load image
         args.post.featuredMediaUrl?.let { url ->
-            Glide.with(this)
+            Glide.with(requireContext())
                 .load(url)
                 .centerCrop()
                 .placeholder(R.drawable.placeholder_image)
+                .error(R.drawable.placeholder_image)
                 .into(imageView)
         }
 

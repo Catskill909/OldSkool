@@ -5,9 +5,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 
 class LiveFragment : Fragment() {
     private var webView: WebView? = null
@@ -35,10 +38,7 @@ class LiveFragment : Fragment() {
                 // Security settings
                 allowFileAccess = false
                 allowContentAccess = false
-                // Use modern security settings
-                with(WebSettings.MIXED_CONTENT_NEVER_ALLOW) {
-                    mixedContentMode = this
-                }
+                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                 
                 // Disable WebView cache to ensure fresh content
                 cacheMode = WebSettings.LOAD_NO_CACHE

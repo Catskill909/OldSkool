@@ -1,34 +1,79 @@
-*.iml
+# Gradle files
+.gradle/
+build/
+**/build/
 .gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizard.xml
-/.idea/gradle.xml
-/.idea/compiler.xml
-/.idea/misc.xml
-/.idea/deploymentTargetDropDown.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+gradle-app.setting
+
+# Local configuration file
 local.properties
+
+# Android Studio generated files and folders
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+output.json
+
+# IntelliJ
+.idea/
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
+*.iws
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/jarRepositories.xml
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# Cache files
+.DS_Store
+/captures
 
 # Generated files
 **/build/generated/
-**/build/generated/data_binding_base_class_source_out/
-**/build/generated/ap_generated_sources/
-**/build/generated/source/buildConfig/
-**/build/generated/source/kapt/
-**/build/generated/source/kaptKotlin/
+**/build/intermediates/
+**/build/outputs/
+**/build/tmp/
+**/build/kotlin/
+**/build/reports/
+debug/
+release/
 
-# ViewBinding generated files
-**/generated/data_binding_base_class_source_out/
+# Navigation SafeArgs
+**/build/generated/source/navigation-args/
+
+# ViewBinding & DataBinding
+**/build/generated/data_binding_base_class_source_out/
 **/*Binding.java
 **/*Binding.class
 **/*BindingImpl.java
 **/*BindingImpl.class
+
+# Annotation processor
+**/build/generated/ap_generated_sources/
+**/build/generated/source/kapt/
+**/build/generated/source/kaptKotlin/
+**/build/tmp/kapt/
+
+# Lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+**/lint-report.*
+**/lint-results.*
+
+# Log Files
+*.log
+
+# Android Profiling
+*.hprof
