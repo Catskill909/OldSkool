@@ -28,7 +28,7 @@ class ArchivesFragment : Fragment() {
         viewModel = ViewModelProvider(this)[ArchivesViewModel::class.java]
         
         // Observe WordPress data
-        viewModel.wordPressData.observe(viewLifecycleOwner) { posts ->
+        viewModel.wordPressData.observe(viewLifecycleOwner) { _ ->
             // TODO: Update UI with WordPress posts
         }
     }

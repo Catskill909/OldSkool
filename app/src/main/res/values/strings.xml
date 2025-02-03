@@ -11,4 +11,5 @@
     <string name="pause">Pause</string>
     <string name="error_loading_posts">Failed to load sessions</string>
     <string name="error_loading_more_posts">Failed to load more sessions</string>
+    <string name="player">Now Playing</string>
 </resources>

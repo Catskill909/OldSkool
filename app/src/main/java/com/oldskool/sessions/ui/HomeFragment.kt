@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.navigation.fragment.findNavController
 import com.oldskool.sessions.R
 import com.oldskool.sessions.viewmodel.HomeViewModel
 
@@ -45,7 +46,9 @@ class HomeFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = PostsAdapter { post ->
-            // TODO: Navigate to post detail
+            findNavController().navigate(
+                HomeFragmentDirections.actionHomeToPostDetail(post)
+            )
         }
 
         recyclerView.apply {

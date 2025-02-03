@@ -24,6 +24,13 @@
         <argument
             android:name="post"
             app:argType="com.oldskool.sessions.data.WordPressPost" />
+        <action
+            android:id="@+id/action_post_detail_to_player_detail"
+            app:destination="@id/navigation_player_detail"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
 
     <fragment
@@ -45,4 +52,21 @@
         android:id="@+id/navigation_contact"
         android:name="com.oldskool.sessions.ContactFragment"
         android:label="@string/contact" />
+        
+    <fragment
+        android:id="@+id/navigation_player_detail"
+        android:name="com.oldskool.sessions.ui.player.PlayerDetailFragment"
+        android:label="@string/player">
+        <argument
+            android:name="title"
+            app:argType="string" />
+        <argument
+            android:name="excerpt"
+            app:argType="string"
+            app:nullable="true" />
+        <argument
+            android:name="imageUrl"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
 </navigation>

@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
@@ -64,9 +65,15 @@ class PostDetailFragment : Fragment() {
         }
 
         // Setup play button
-        args.post.audioUrl?.let { url ->
+        args.post.audioUrl?.let { _ ->
             playButton.setOnClickListener {
-                // TODO: Implement audio playback
+                findNavController().navigate(
+                    PostDetailFragmentDirections.actionPostDetailToPlayerDetail(
+                        title = args.post.title,
+                        excerpt = args.post.audioUrl ?: "",
+                        imageUrl = args.post.featuredMediaUrl
+                    )
+                )
             }
             playButton.visibility = View.VISIBLE
         } ?: run {
