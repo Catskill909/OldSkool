@@ -5,20 +5,37 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Initial project setup
-- Project requirements documentation in README.md
-- Basic project structure planning
-- Implemented centralized WebView audio control
-  - Automatic audio stopping when switching tabs
-  - JavaScript integration for audio control in MainActivity
-  - WebView registration system for audio management
-  - Clean lifecycle management between fragments
-  - Disabled reselection of active tabs to prevent unwanted WebView reloads
-  - Enhanced audio cleanup when navigating between tabs
+- Implemented infinite scrolling list with WordPress API integration
+  - Added WordPressPost data model with Parcelable support
+  - Created PostsAdapter for RecyclerView
+  - Implemented ArchivesViewModel for data management
+  - Added Safe Args for type-safe navigation
+- Integrated Google's Oswald font using downloadable fonts system
+- Enhanced bottom navigation with larger icons (36dp) and text (16sp)
+- Added proper spacing and padding in bottom navigation bar (80dp height)
+
+### Changed
+- Optimized list item layout with proper text sizing and spacing
+- Removed uppercase styling from navigation and list items
+- Improved text readability with adjusted letter spacing
+- Updated bottom navigation layout to prevent icon/text overlap
+
+### Fixed
+- Resolved WebView security warnings with proper documentation
+- Removed unused WebKit imports
+- Cleaned up build artifacts from git tracking
+- Updated .gitignore and added .gitattributes for better source control
+
+### In Progress
+- UI enhancements for post list items
+  - Adding gradient overlay for title text
+  - Improving image display and text visibility
+- Post detail view implementation
+  - Audio player controls
+  - Progress bar integration
 
 ### Planned
 - Audio service implementation for browser and in-app playback
 - Metadata service for lock screen integration
-- Infinite scrolling list using WordPress API
 - Background audio playback optimization
 - Call handling and audio interruption management

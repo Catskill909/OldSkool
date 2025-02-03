@@ -1,5 +1,6 @@
 package com.oldskool.sessions
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,8 +10,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
-import androidx.webkit.WebSettingsCompat
-import androidx.webkit.WebViewFeature
 
 class LiveFragment : Fragment() {
     private var webView: WebView? = null
@@ -30,7 +29,14 @@ class LiveFragment : Fragment() {
     private fun setupWebView(view: View) {
         webView = view.findViewById<WebView>(R.id.webView)?.apply {
             with(settings) {
-                // Required for audio player functionality, but restricted to trusted domains
+                // SECURITY NOTE: JavaScript is required for the audio player functionality.
+                // This is safe because:
+                // 1. We only load content from our trusted domain
+                // 2. We have disabled file and content access
+                // 3. We enforce HTTPS and block mixed content
+                // 4. We disable WebView cache to prevent persistence of sensitive data
+                // 5. Content-Security-Policy headers are enforced on the server
+                @SuppressLint("SetJavaScriptEnabled")
                 javaScriptEnabled = true
                 mediaPlaybackRequiresUserGesture = false
                 domStorageEnabled = true

@@ -2,39 +2,67 @@
 
 A native Android application for Old Skool Sessions, featuring enhanced audio playback and content management.
 
-## Core Features
+## Implementation Status
 
-### Audio Service
-- Browser-based audio playback
-- Native in-app audio player for remote URLs
-- Background audio playback support
-- Intelligent audio handling (call interruptions, system events)
-- Optimized streaming for both on-demand and live content
+### Completed Features
 
-### Metadata Integration
-- Lock screen media controls
-- Real-time metadata updates
-- Azuracast API integration
+#### Content Management
+- ✅ Infinite scrolling list powered by WordPress API
+- ✅ Rich media display with images and titles
+- ✅ Type-safe navigation with Safe Args
+- ✅ Responsive list-to-detail transitions
 
-### Content Management
-- Infinite scrolling content list powered by WordPress API
-- Rich media display (images, artist info, titles)
-- Detailed view with integrated audio player
-- Responsive list-to-detail navigation
+#### WebView Integration
+- ✅ Secure WebView configuration
+- ✅ JavaScript enabled with proper security measures
+- ✅ Mixed content blocking
+- ✅ Cache management
 
-### Original Features
-- Live stream access
-- Archives of past sessions
-- Information page
-- Contact form
+### In Progress
 
-## Features
+#### Detail View Implementation
+- 🔄 Full-screen cover art display
+- 🔄 Title and artist information with Oswald typography
+- 🔄 Play/Pause button implementation
+- 🔄 Audio progress bar (scrubber)
 
-- Dark mode design
-- WebView integration for seamless content display
-- Material Design bottom navigation
-- Custom header image
-- Responsive layout
+#### Audio System Integration
+- 🔄 MediaPlayer service setup
+- 🔄 Background playback support
+- 🔄 Lock screen controls and metadata
+- 🔄 Audio focus and interruption handling
+
+### Planned Features
+
+#### Audio Service Components
+- ExoPlayer integration for reliable playback
+- Foreground service for background audio
+- Buffering and streaming optimization
+- Error handling and retry logic
+
+#### Media Session Features
+- Lock screen media controls (play/pause, skip)
+- Real-time metadata updates (title, artist, artwork)
+- Audio focus management
+- Phone call interruption handling
+- Notification controls with artwork
+
+## Architecture
+
+### Tech Stack
+- Kotlin
+- AndroidX components
+- Material Design 3
+- ViewModel & LiveData
+- Navigation component with Safe Args
+- Glide for image loading
+- Retrofit for API calls
+
+### Key Components
+- `WordPressPost`: Data model for posts (Parcelable)
+- `PostsAdapter`: RecyclerView adapter for infinite scrolling
+- `ArchivesViewModel`: Manages post data and pagination
+- `LiveFragment`: Handles WebView audio playback
 
 ## URLs
 
@@ -42,13 +70,20 @@ A native Android application for Old Skool Sessions, featuring enhanced audio pl
 - Info/Soundboard: https://oldskoolsessions.com/soundboard/
 - Contact: https://starkey.digital/contact-oss/
 
-## Development
+## Development Setup
 
-Built with:
-- Kotlin
-- AndroidX components
-- Material Design components
-- WebView for content display
+1. Clone the repository
+2. Open in Android Studio
+3. Sync Gradle files
+4. Run on device or emulator (min SDK 24)
+
+## Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Submit a pull request
+
+Please follow the existing code style and add appropriate tests.
 
 ### Audio Implementation
 
