@@ -2,7 +2,29 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/navigation_archives">
+    app:startDestination="@id/navigation_home">
+
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.oldskool.sessions.ui.HomeFragment"
+        android:label="@string/home">
+        <action
+            android:id="@+id/action_home_to_post_detail"
+            app:destination="@id/navigation_post_detail"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_post_detail"
+        android:name="com.oldskool.sessions.ui.PostDetailFragment"
+        android:label="@string/post_detail">
+        <argument
+            android:name="post"
+            app:argType="com.oldskool.sessions.data.WordPressPost" />
+    </fragment>
 
     <fragment
         android:id="@+id/navigation_archives"

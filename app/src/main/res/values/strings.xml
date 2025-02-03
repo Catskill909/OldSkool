@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Old Skool Sessions</string>
+    <string name="home">Home</string>
     <string name="archives">Archives</string>
     <string name="live">Live</string>
     <string name="info">Info</string>
     <string name="contact">Contact</string>
+    <string name="post_detail">Session Details</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="error_loading_posts">Failed to load sessions</string>
+    <string name="error_loading_more_posts">Failed to load more sessions</string>
 </resources>

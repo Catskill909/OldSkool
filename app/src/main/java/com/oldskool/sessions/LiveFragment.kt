@@ -25,14 +25,31 @@ class LiveFragment : Fragment() {
     }
 
     private fun setupWebView(view: View) {
-        webView = view.findViewById<WebView>(R.id.webView).apply {
-            settings.apply {
+        webView = view.findViewById<WebView>(R.id.webView)?.apply {
+            with(settings) {
+                // Required for audio player functionality, but restricted to trusted domains
                 javaScriptEnabled = true
                 mediaPlaybackRequiresUserGesture = false
                 domStorageEnabled = true
+                
+                // Security settings
+                allowFileAccess = false
+                allowContentAccess = false
+                // Use modern security settings
+                with(WebSettings.MIXED_CONTENT_NEVER_ALLOW) {
+                    mixedContentMode = this
+                }
+                
                 // Disable WebView cache to ensure fresh content
-                cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                cacheMode = WebSettings.LOAD_NO_CACHE
+                
+                // Set custom user agent
+                userAgentString = "OldSkoolSessions-Android"
             }
+            
+            // Additional security measures
+            setOnCreateContextMenuListener(null) // Disable context menu
+            isLongClickable = false // Disable long press menu
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
