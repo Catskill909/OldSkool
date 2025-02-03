@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.oldskool.sessions.app-mergeReleaseResources-47:/layout/fragment_info.xml",
+        "source": "com.oldskool.sessions.app-main-49:/layout/fragment_info.xml"
+    },
+    {
+        "merged": "com.oldskool.sessions.app-mergeReleaseResources-47:/layout/fragment_archives.xml",
+        "source": "com.oldskool.sessions.app-main-49:/layout/fragment_archives.xml"
+    },
+    {
+        "merged": "com.oldskool.sessions.app-mergeReleaseResources-47:/layout/fragment_contact.xml",
+        "source": "com.oldskool.sessions.app-main-49:/layout/fragment_contact.xml"
+    },
+    {
+        "merged": "com.oldskool.sessions.app-mergeReleaseResources-47:/layout/fragment_live.xml",
+        "source": "com.oldskool.sessions.app-main-49:/layout/fragment_live.xml"
+    },
+    {
+        "merged": "com.oldskool.sessions.app-mergeReleaseResources-47:/layout/activity_main.xml",
+        "source": "com.oldskool.sessions.app-main-49:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.oldskool.sessions.app-mergeReleaseResources-47:/layout/fragment_webview.xml",
+        "source": "com.oldskool.sessions.app-main-49:/layout/fragment_webview.xml"
+    }
+]

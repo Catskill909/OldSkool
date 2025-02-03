@@ -4,6 +4,7 @@ color accent
 color background
 color black
 color bottom_nav_colors
+color bottom_nav_icon_color
 color ic_launcher_background
 color primary
 color primary_dark

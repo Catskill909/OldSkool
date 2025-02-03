@@ -4,11 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
 
 class LiveFragment : Fragment() {
+    private var webView: WebView? = null
+    private var lastUrl: String? = null
+    private var needsRefresh: Boolean = false
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_live, container, false)
     }
@@ -16,9 +21,68 @@ class LiveFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        val webView = view.findViewById<WebView>(R.id.webView)
-        webView.settings.javaScriptEnabled = true
-        webView.webViewClient = WebViewClient()
-        webView.loadUrl("https://oldskoolsessions.com/OSS/")
+        setupWebView(view)
+    }
+
+    private fun setupWebView(view: View) {
+        webView = view.findViewById<WebView>(R.id.webView).apply {
+            settings.apply {
+                javaScriptEnabled = true
+                mediaPlaybackRequiresUserGesture = false
+                domStorageEnabled = true
+                // Disable WebView cache to ensure fresh content
+                cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+            }
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    lastUrl = url
+                }
+            }
+            webChromeClient = WebChromeClient()
+        }
+        
+        loadInitialUrl()
+    }
+
+    private fun loadInitialUrl() {
+        webView?.loadUrl("https://oldskoolsessions.com/OSS/")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (needsRefresh) {
+            // Reload the WebView when returning to ensure fresh state
+            webView?.reload()
+            needsRefresh = false
+        }
+        registerWebView()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Mark for refresh if audio was playing
+        needsRefresh = (activity as? MainActivity)?.isAudioPlaying() == true
+        unregisterWebView()
+    }
+
+    override fun onDestroyView() {
+        unregisterWebView()
+        webView?.apply {
+            stopLoading()
+            clearHistory()
+            clearCache(true)
+            loadUrl("about:blank")
+        }
+        webView = null
+        super.onDestroyView()
+    }
+
+    private fun registerWebView() {
+        webView?.let { (activity as? MainActivity)?.registerWebView(it) }
+    }
+
+    private fun unregisterWebView() {
+        webView?.let { (activity as? MainActivity)?.unregisterWebView(it) }
     }
 }
