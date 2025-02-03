@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/navigation_archives">
+
+    <fragment
+        android:id="@+id/navigation_archives"
+        android:name="com.oldskool.sessions.ArchivesFragment"
+        android:label="@string/archives" />
+
+    <fragment
+        android:id="@+id/navigation_live"
+        android:name="com.oldskool.sessions.LiveFragment"
+        android:label="@string/live" />
+
+    <fragment
+        android:id="@+id/navigation_info"
+        android:name="com.oldskool.sessions.InfoFragment"
+        android:label="@string/info" />
+
+    <fragment
+        android:id="@+id/navigation_contact"
+        android:name="com.oldskool.sessions.ContactFragment"
+        android:label="@string/contact" />
+
+    <fragment
+        android:id="@+id/navigation_contact"
+        android:name="com.oldskool.sessions.ui.WebViewFragment"
+        android:label="@string/contact" />
+
+</navigation>

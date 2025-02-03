@@ -1,0 +1,30 @@
+[
+    {
+        "merged": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-mergeDebugResources-47:/layout/activity_main.xml",
+        "source": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-main-50:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-mergeDebugResources-47:/layout/fragment_archives.xml",
+        "source": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-main-50:/layout/fragment_archives.xml"
+    },
+    {
+        "merged": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-mergeDebugResources-47:/layout/fragment_live.xml",
+        "source": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-main-50:/layout/fragment_live.xml"
+    },
+    {
+        "merged": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-mergeDebugResources-47:/layout/fragment_info.xml",
+        "source": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-main-50:/layout/fragment_info.xml"
+    },
+    {
+        "merged": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-mergeDebugResources-47:/layout/fragment_contact.xml",
+        "source": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-main-50:/layout/fragment_contact.xml"
+    },
+    {
+        "merged": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-mergeDebugResources-47:/layout/fragment_webview.xml",
+        "source": "/Users/paulhenshaw/.gradle/daemon/8.8/com.oldskool.sessions.app-main-50:/layout/fragment_webview.xml"
+    },
+    {
+        "merged": "com.oldskool.sessions.app-mergeDebugResources-47:/layout/fragment_archives.xml",
+        "source": "com.oldskool.sessions.app-main-50:/layout/fragment_archives.xml"
+    }
+]
