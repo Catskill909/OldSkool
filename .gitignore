@@ -17,3 +17,18 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Generated files
+**/build/generated/
+**/build/generated/data_binding_base_class_source_out/
+**/build/generated/ap_generated_sources/
+**/build/generated/source/buildConfig/
+**/build/generated/source/kapt/
+**/build/generated/source/kaptKotlin/
+
+# ViewBinding generated files
+**/generated/data_binding_base_class_source_out/
+**/*Binding.java
+**/*Binding.class
+**/*BindingImpl.java
+**/*BindingImpl.class
