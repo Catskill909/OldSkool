@@ -1,21 +1,14 @@
 package com.oldskool.sessions.media
 
-import android.content.ComponentName
 import android.content.Context
-import android.support.v4.media.MediaBrowserCompat
-import android.support.v4.media.MediaMetadataCompat
-import android.support.v4.media.session.MediaControllerCompat
-import android.support.v4.media.session.PlaybackStateCompat
-
+import android.media.MediaPlayer
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class OSSMediaManager(private val context: Context) {
-
-    private var mediaBrowser: MediaBrowserCompat? = null
-    private var mediaController: MediaControllerCompat? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     // Playback state
     private val _isPlaying = MutableStateFlow(false)
@@ -28,110 +21,100 @@ class OSSMediaManager(private val context: Context) {
     val duration: StateFlow<Long> = _duration.asStateFlow()
 
     // Current track metadata
-    @Suppress("unused")
     private val _currentTitle = MutableStateFlow<String?>(null)
-    @Suppress("unused")
     val currentTitle: StateFlow<String?> = _currentTitle.asStateFlow()
 
-    @Suppress("unused")
     private val _currentArtwork = MutableStateFlow<String?>(null)
-    @Suppress("unused")
     val currentArtwork: StateFlow<String?> = _currentArtwork.asStateFlow()
 
-    private val connectionCallback = object : MediaBrowserCompat.ConnectionCallback() {
-        override fun onConnected() {
-            mediaBrowser?.sessionToken?.let { token ->
-                mediaController = MediaControllerCompat(context, token).apply {
-                    registerCallback(controllerCallback)
-                }
-            }
-        }
-
-        override fun onConnectionSuspended() {
-            // Handle connection suspension
-        }
-
-        override fun onConnectionFailed() {
-            // Handle connection failure
-        }
-    }
-
-    private val controllerCallback = object : MediaControllerCompat.Callback() {
-        override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
-            state?.let {
-                _isPlaying.value = it.state == PlaybackStateCompat.STATE_PLAYING
-                _currentPosition.value = it.position
-            }
-        }
-
-        override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
-            metadata?.let {
-                _currentTitle.value = it.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
-                _duration.value = it.getLong(MediaMetadataCompat.METADATA_KEY_DURATION)
-            }
-        }
-    }
-
-    fun connect() {
-        if (mediaBrowser?.isConnected == true) return
-
-        mediaBrowser = MediaBrowserCompat(
-            context,
-            ComponentName(context, OSSMediaService::class.java),
-            connectionCallback,
-            null
-        ).apply {
-            connect()
-        }
-    }
-
-    fun disconnect() {
-        mediaController?.unregisterCallback(controllerCallback)
-        mediaBrowser?.disconnect()
-        mediaBrowser = null
-    }
-
     fun playAudio(url: String, title: String, artworkUrl: String?) {
-        _currentTitle.value = title
-        _currentArtwork.value = artworkUrl
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-        val focusRequest = android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
-            .setAudioAttributes(android.media.AudioAttributes.Builder()
-                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-            )
-            .build()
-        audioManager.requestAudioFocus(focusRequest)
-
-        // Extract MP3 URL from WordPress excerpt
-        val mp3Url = url.substringAfter("<p>").substringBefore("</p>").trim()
-        
-        (context as? Context)?.startService(
-            android.content.Intent(context, OSSMediaService::class.java)
-        )
-
-        (context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? android.media.session.MediaSessionManager)?.let {
-            mediaController?.transportControls?.playFromUri(android.net.Uri.parse(mp3Url), null)
+        Log.d("OSSMediaManager", "Playing audio: $url")
+        try {
+            // Release any existing player
+            mediaPlayer?.release()
+            mediaPlayer = null
+            
+            // Create and prepare new player
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(url)
+                setOnPreparedListener { 
+                    Log.d("OSSMediaManager", "Media prepared, starting playback")
+                    start()
+                    _isPlaying.value = true
+                    _duration.value = duration.toLong()
+                }
+                setOnCompletionListener {
+                    Log.d("OSSMediaManager", "Playback completed")
+                    _isPlaying.value = false
+                }
+                setOnErrorListener { _, what, extra ->
+                    Log.e("OSSMediaManager", "Media player error: what=$what extra=$extra")
+                    _isPlaying.value = false
+                    true
+                }
+                prepareAsync()
+            }
+            
+            _currentTitle.value = title
+            _currentArtwork.value = artworkUrl
+        } catch (e: Exception) {
+            Log.e("OSSMediaManager", "Error playing audio", e)
+            _isPlaying.value = false
         }
     }
 
     fun togglePlayPause() {
-        if (_isPlaying.value) {
-            mediaController?.transportControls?.pause()
-        } else {
-            mediaController?.transportControls?.play()
+        Log.d("OSSMediaManager", "Toggle play/pause")
+        try {
+            mediaPlayer?.let { player ->
+                if (player.isPlaying) {
+                    Log.d("OSSMediaManager", "Pausing playback")
+                    player.pause()
+                    _isPlaying.value = false
+                } else {
+                    Log.d("OSSMediaManager", "Starting playback")
+                    player.start()
+                    _isPlaying.value = true
+                }
+            } ?: Log.w("OSSMediaManager", "MediaPlayer is null")
+        } catch (e: Exception) {
+            Log.e("OSSMediaManager", "Error toggling play/pause", e)
+            _isPlaying.value = false
         }
     }
 
     fun seekTo(position: Long) {
-        mediaController?.transportControls?.seekTo(position)
+        mediaPlayer?.seekTo(position.toInt())
+        _currentPosition.value = position
     }
 
-    fun formatTime(milliseconds: Long): String {
-        val totalSeconds = milliseconds / 1000
+    fun updateProgress() {
+        mediaPlayer?.let { player ->
+            if (player.isPlaying) {
+                _currentPosition.value = player.currentPosition.toLong()
+            }
+        }
+    }
+
+    fun release() {
+        mediaPlayer?.apply {
+            if (isPlaying) {
+                stop()
+            }
+            release()
+        }
+        mediaPlayer = null
+        _isPlaying.value = false
+        _currentPosition.value = 0
+        _duration.value = 0
+    }
+
+
+
+    fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
-        return String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds)
+        return String.format("%d:%02d", minutes, seconds)
     }
 }

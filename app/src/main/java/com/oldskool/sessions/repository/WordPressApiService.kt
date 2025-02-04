@@ -9,6 +9,6 @@ interface WordPressApiService {
     suspend fun getPosts(
         @Query("page") page: Int = 1,
         @Query("per_page") perPage: Int = 10,
-        @Query("_fields") fields: String = "id,title,excerpt,date,x_featured_media_large"
+        @Query("_fields") fields: String = "id,title,excerpt,date,x_featured_media_large,x_metadata"
     ): List<WordPressPost>
 }

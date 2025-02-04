@@ -1,6 +1,7 @@
 package com.oldskool.sessions.ui.player
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +18,7 @@ import com.bumptech.glide.Glide
 import com.oldskool.sessions.R
 import com.oldskool.sessions.media.OSSMediaManager
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -69,17 +71,26 @@ class PlayerDetailFragment : Fragment() {
         // Set initial UI state
         titleText.text = args.title
         loadAlbumArt(args.imageUrl)
-        progressBar.isVisible = false
-        timeContainer.isVisible = false
 
         // Start playback if we have a URL
-        args.excerpt?.let { excerpt ->
+        Log.d("PlayerDetailFragment", "Audio URL: ${args.audioUrl}")
+        Log.d("PlayerDetailFragment", "Title: ${args.title}")
+        Log.d("PlayerDetailFragment", "Image URL: ${args.imageUrl}")
+
+        args.audioUrl?.let { url ->
+            Log.d("PlayerDetailFragment", "Starting playback with URL: $url")
             mediaManager.playAudio(
-                url = excerpt,
+                url = url,
                 title = args.title,
                 artworkUrl = args.imageUrl
             )
-        }
+        } ?: Log.e("PlayerDetailFragment", "No audio URL provided")
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        mediaManager.release()
+        progressUpdateJob?.cancel()
     }
 
     private fun setupClickListeners() {
@@ -115,25 +126,34 @@ class PlayerDetailFragment : Fragment() {
 
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
-            mediaManager.isPlaying.collectLatest { isPlaying: Boolean ->
+            mediaManager.isPlaying.collectLatest { isPlaying ->
                 playPauseButton.setImageResource(
-                    if (isPlaying) R.drawable.ic_pause_circle
-                    else R.drawable.ic_play_circle
+                    if (isPlaying) R.drawable.baseline_pause_24 else R.drawable.baseline_play_arrow_24
                 )
-                progressBar.isVisible = isPlaying
-                timeContainer.isVisible = isPlaying
+                // Update visibility of progress bar based on playback state
+                progressBar.visibility = if (isPlaying) View.VISIBLE else View.INVISIBLE
             }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            mediaManager.duration.collectLatest { duration: Long ->
-                progressBar.max = duration.toInt()
-                totalTime.text = mediaManager.formatTime(duration)
+            mediaManager.duration.collectLatest { duration ->
+                if (duration > 0) {
+                    progressBar.max = duration.toInt()
+                    timeContainer.isVisible = true
+                    totalTime.text = mediaManager.formatTime(duration)
+                }
             }
         }
 
         progressUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
-            mediaManager.currentPosition.collectLatest { position: Long ->
+            while (true) {
+                mediaManager.updateProgress()
+                delay(1000) // Update every second
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            mediaManager.currentPosition.collectLatest { position ->
                 if (!userIsSeeking) {
                     progressBar.progress = position.toInt()
                     currentTime.text = mediaManager.formatTime(position)
@@ -143,25 +163,10 @@ class PlayerDetailFragment : Fragment() {
     }
 
     private fun loadAlbumArt(imageUrl: String?) {
-        imageUrl?.let {
-            Glide.with(this)
-                .load(it)
-                .placeholder(R.drawable.placeholder_artwork)
-                .error(R.drawable.placeholder_artwork)
+        if (imageUrl != null) {
+            Glide.with(requireContext())
+                .load(imageUrl)
                 .into(albumArt)
-        } ?: run {
-            albumArt.setImageResource(R.drawable.placeholder_artwork)
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        mediaManager.connect()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        mediaManager.disconnect()
-        progressUpdateJob?.cancel()
     }
 }

@@ -9,29 +9,15 @@
         android:name="com.oldskool.sessions.ui.HomeFragment"
         android:label="@string/home">
         <action
-            android:id="@+id/action_home_to_post_detail"
-            app:destination="@id/navigation_post_detail"
-            app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim"
-            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
-            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/navigation_post_detail"
-        android:name="com.oldskool.sessions.ui.PostDetailFragment"
-        android:label="@string/post_detail">
-        <argument
-            android:name="post"
-            app:argType="com.oldskool.sessions.data.WordPressPost" />
-        <action
-            android:id="@+id/action_post_detail_to_player_detail"
+            android:id="@+id/action_home_to_player_detail"
             app:destination="@id/navigation_player_detail"
             app:enterAnim="@anim/nav_default_enter_anim"
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
+
+
 
     <fragment
         android:id="@+id/navigation_archives"
@@ -61,7 +47,7 @@
             android:name="title"
             app:argType="string" />
         <argument
-            android:name="excerpt"
+            android:name="audioUrl"
             app:argType="string"
             app:nullable="true" />
         <argument

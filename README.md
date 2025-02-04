@@ -21,14 +21,15 @@ A native Android application for Old Skool Sessions, featuring enhanced audio pl
 ### In Progress
 
 #### Detail View Implementation
-- 🔄 Full-screen cover art display
-- 🔄 Title and artist information with Oswald typography
-- 🔄 Play/Pause button implementation
-- 🔄 Audio progress bar (scrubber)
+- ✅ Full-screen cover art display
+- ✅ Title and artist information with Oswald typography
+- ✅ Play/Pause button implementation
+- ✅ Audio progress bar with seek functionality
 
 #### Audio System Integration
-- 🔄 MediaPlayer service setup
-- 🔄 Background playback support
+- ✅ Native MediaPlayer implementation
+- ✅ Basic playback controls (play/pause)
+- ✅ Progress tracking and seeking
 - 🔄 Lock screen controls and metadata
 - 🔄 Audio focus and interruption handling
 
@@ -63,6 +64,8 @@ A native Android application for Old Skool Sessions, featuring enhanced audio pl
 - `PostsAdapter`: RecyclerView adapter for infinite scrolling
 - `ArchivesViewModel`: Manages post data and pagination
 - `LiveFragment`: Handles WebView audio playback
+- `OSSMediaManager`: Controls native audio playback
+- `PlayerDetailFragment`: Handles player UI and controls
 
 ## URLs
 

@@ -47,7 +47,11 @@ class HomeFragment : Fragment() {
     private fun setupRecyclerView() {
         adapter = PostsAdapter { post ->
             findNavController().navigate(
-                HomeFragmentDirections.actionHomeToPostDetail(post)
+                HomeFragmentDirections.actionHomeToPlayerDetail(
+                    title = post.title,
+                    audioUrl = post.audioUrl,
+                    imageUrl = post.featuredMediaUrl
+                )
             )
         }
 

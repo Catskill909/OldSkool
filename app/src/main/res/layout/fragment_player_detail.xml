@@ -70,17 +70,18 @@
         android:layout_marginBottom="32dp">
 
         <!-- Play/Pause Button -->
-        <ImageButton
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/playPauseButton"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_marginBottom="32dp"
-            android:background="@android:color/black"
-            android:src="@drawable/ic_play_circle"
-            android:scaleType="fitCenter"
+            android:src="@drawable/baseline_play_arrow_24"
+            app:backgroundTint="@android:color/white"
+            app:fabSize="normal"
             app:layout_constraintBottom_toTopOf="@id/progressBar"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
+            app:tint="@android:color/black"
             android:contentDescription="Play/Pause" />
 
         <!-- Progress Bar -->
