@@ -6,6 +6,16 @@ A native Android application for Old Skool Sessions, featuring enhanced audio pl
 
 ### Completed Features
 
+#### App Experience
+- ✅ Custom splash screen with brand image
+- ✅ Smooth app launch experience
+- ✅ Proper theme and styling
+
+#### Media Controls
+- ✅ Enhanced notification controls
+- ✅ Proper playback state management
+- ✅ Improved navigation handling
+
 #### Content Management
 - ✅ Infinite scrolling list powered by WordPress API
 - ✅ Rich media display with images and titles
@@ -28,8 +38,9 @@ A native Android application for Old Skool Sessions, featuring enhanced audio pl
 
 #### Audio System Integration
 - ✅ Native MediaPlayer implementation
-- ✅ Basic playback controls (play/pause)
+- ✅ Enhanced playback controls with notification
 - ✅ Progress tracking and seeking
+- ✅ Notification media controls
 - 🔄 Lock screen controls and metadata
 - 🔄 Audio focus and interruption handling
 

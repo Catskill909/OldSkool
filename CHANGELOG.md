@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added custom splash screen with app branding
+  - Implemented proper image scaling for all device densities
+  - Added smooth transition to main content
+- Enhanced media notification system
+  - Fixed notification click behavior to maintain playback state
+  - Improved navigation handling for better UX
+  - Updated notification styling and controls
+
+### Fixed
+- Resolved notification click issues causing audio interruption
+- Fixed fragment recreation on notification clicks
+- Improved navigation state management
+- Added proper error handling for media session
+
+### Previous Changes
+
+### Added
 - Implemented infinite scrolling list with WordPress API integration
   - Added WordPressPost data model with Parcelable support
   - Created PostsAdapter for RecyclerView
