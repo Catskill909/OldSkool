@@ -45,14 +45,24 @@
         android:label="@string/player">
         <argument
             android:name="title"
-            app:argType="string" />
+            app:argType="string"
+            android:defaultValue="Now Playing" />
         <argument
             android:name="audioUrl"
             app:argType="string"
-            app:nullable="true" />
+            android:defaultValue="" />
         <argument
             android:name="imageUrl"
             app:argType="string"
-            app:nullable="true" />
+            android:defaultValue="" />
+        <deepLink
+            app:uri="oldskool://player" />
+        <action
+            android:id="@+id/action_global_player_detail"
+            app:destination="@id/navigation_player_detail"
+            app:launchSingleTop="true"
+            app:popUpTo="@id/navigation_player_detail"
+            app:popUpToInclusive="true" />
+
     </fragment>
 </navigation>

@@ -51,40 +51,61 @@ class PlayerDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize UI components
-        backButton = view.findViewById(R.id.backButton)
-        albumArt = view.findViewById(R.id.albumArt)
-        titleText = view.findViewById(R.id.titleText)
-        playPauseButton = view.findViewById(R.id.playPauseButton)
-        progressBar = view.findViewById(R.id.progressBar)
-        timeContainer = view.findViewById(R.id.timeContainer)
-        currentTime = view.findViewById(R.id.currentTime)
-        totalTime = view.findViewById(R.id.totalTime)
+        try {
+            // Initialize UI components
+            backButton = view.findViewById(R.id.backButton)
+            albumArt = view.findViewById(R.id.albumArt)
+            titleText = view.findViewById(R.id.titleText)
+            playPauseButton = view.findViewById(R.id.playPauseButton)
+            progressBar = view.findViewById(R.id.progressBar)
+            timeContainer = view.findViewById(R.id.timeContainer)
+            currentTime = view.findViewById(R.id.currentTime)
+            totalTime = view.findViewById(R.id.totalTime)
 
-        // Initialize MediaManager
-        mediaManager = OSSMediaManager(requireContext())
+            // Initialize MediaManager
+            mediaManager = OSSMediaManager.getInstance(requireContext())
 
-        setupClickListeners()
-        setupProgressBar()
-        setupObservers()
+            setupClickListeners()
+            setupProgressBar()
+            setupObservers()
 
-        // Set initial UI state
-        titleText.text = args.title
-        loadAlbumArt(args.imageUrl)
+            // Get arguments safely
+            val safeArgs = try {
+                navArgs<PlayerDetailFragmentArgs>().value
+            } catch (e: Exception) {
+                Log.e("PlayerDetailFragment", "Failed to get arguments: ${e.message}")
+                // Don't navigate up, just use current state
+                null
+            }
 
-        // Start playback if we have a URL
-        Log.d("PlayerDetailFragment", "Audio URL: ${args.audioUrl}")
-        Log.d("PlayerDetailFragment", "Title: ${args.title}")
-        Log.d("PlayerDetailFragment", "Image URL: ${args.imageUrl}")
+            // Observe current playback state
+            lifecycleScope.launch {
+                mediaManager.currentTitle.collectLatest { title ->
+                    if (title != null) {
+                        titleText.text = title
+                    } else {
+                        // No current playback, try to start new from arguments
+                        safeArgs?.let { args ->
+                            titleText.text = args.title
+                            loadAlbumArt(args.imageUrl)
 
-        args.audioUrl?.let { url ->
-            Log.d("PlayerDetailFragment", "Starting playback with URL: $url")
-            mediaManager.playAudio(
-                url = url,
-                title = args.title,
-                artworkUrl = args.imageUrl
-            )
-        } ?: Log.e("PlayerDetailFragment", "No audio URL provided")
+                            args.audioUrl?.let { url ->
+                                Log.d("PlayerDetailFragment", "Preparing audio with URL: $url")
+                                mediaManager.prepareAudio(
+                                    url = url,
+                                    title = args.title,
+                                    artworkUrl = args.imageUrl,
+                                    sourceFragmentId = R.id.navigation_player_detail
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("PlayerDetailFragment", "Error in onViewCreated: ${e.message}")
+            findNavController().navigateUp()
+        }
     }
 
     override fun onDestroyView() {
@@ -99,29 +120,53 @@ class PlayerDetailFragment : Fragment() {
         }
 
         playPauseButton.setOnClickListener {
-            mediaManager.togglePlayPause()
+            try {
+                mediaManager.togglePlayPause()
+            } catch (e: Exception) {
+                Log.e("PlayerDetailFragment", "Error toggling play/pause", e)
+                // Disable the button if we hit an error
+                playPauseButton.isEnabled = false
+            }
         }
     }
 
     private fun setupProgressBar() {
-        progressBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    currentTime.text = mediaManager.formatTime(progress.toLong())
+        try {
+            progressBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    try {
+                        if (fromUser) {
+                            currentTime.text = mediaManager.formatTime(progress.toLong())
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PlayerDetailFragment", "Error updating progress text", e)
+                    }
                 }
-            }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                userIsSeeking = true
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                userIsSeeking = false
-                seekBar?.progress?.let { progress ->
-                    mediaManager.seekTo(progress.toLong())
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                    userIsSeeking = true
                 }
-            }
-        })
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                    try {
+                        userIsSeeking = false
+                        seekBar?.progress?.let { progress ->
+                            if (progress >= 0) {
+                                mediaManager.seekTo(progress.toLong())
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PlayerDetailFragment", "Error seeking to position", e)
+                        // Reset seeking state
+                        userIsSeeking = false
+                    }
+                }
+            })
+        } catch (e: Exception) {
+            Log.e("PlayerDetailFragment", "Error setting up progress bar", e)
+            // Disable progress bar if setup fails
+            progressBar.isEnabled = false
+        }
     }
 
     private fun setupObservers() {
@@ -130,8 +175,6 @@ class PlayerDetailFragment : Fragment() {
                 playPauseButton.setImageResource(
                     if (isPlaying) R.drawable.baseline_pause_24 else R.drawable.baseline_play_arrow_24
                 )
-                // Update visibility of progress bar based on playback state
-                progressBar.visibility = if (isPlaying) View.VISIBLE else View.INVISIBLE
             }
         }
 

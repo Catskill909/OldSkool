@@ -16,7 +16,13 @@
         android:theme="@style/Theme.OldSkool">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
+            <!-- Handle notification clicks -->
+            <intent-filter>
+                <action android:name="com.oldskool.sessions.action.OPEN_PLAYER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

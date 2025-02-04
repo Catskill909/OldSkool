@@ -48,9 +48,9 @@ class HomeFragment : Fragment() {
         adapter = PostsAdapter { post ->
             findNavController().navigate(
                 HomeFragmentDirections.actionHomeToPlayerDetail(
-                    title = post.title,
-                    audioUrl = post.audioUrl,
-                    imageUrl = post.featuredMediaUrl
+                    title = post.title ?: "No Title",
+                    audioUrl = post.audioUrl ?: "",
+                    imageUrl = post.featuredMediaUrl ?: ""
                 )
             )
         }

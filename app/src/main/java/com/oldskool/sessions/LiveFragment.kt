@@ -14,7 +14,7 @@ import androidx.fragment.app.Fragment
 class LiveFragment : Fragment() {
     private var webView: WebView? = null
     private var lastUrl: String? = null
-    private var needsRefresh: Boolean = false
+    private var isAudioPlaying: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_live, container, false)
@@ -74,23 +74,30 @@ class LiveFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (needsRefresh) {
-            // Reload the WebView when returning to ensure fresh state
-            webView?.reload()
-            needsRefresh = false
+        if (isAudioPlaying) {
+            webView?.evaluateJavascript("""
+                var mediaElements = document.querySelectorAll('audio, video');
+                mediaElements.forEach(function(media) {
+                    media.play();
+                });
+            """.trimIndent(), null)
         }
-        registerWebView()
     }
 
     override fun onPause() {
         super.onPause()
-        // Mark for refresh if audio was playing
-        needsRefresh = (activity as? MainActivity)?.isAudioPlaying() == true
-        unregisterWebView()
+        webView?.evaluateJavascript("""
+            var mediaElements = document.querySelectorAll('audio, video');
+            mediaElements.forEach(function(media) {
+                if (!media.paused) {
+                    isAudioPlaying = true;
+                    media.pause();
+                }
+            });
+        """.trimIndent(), null)
     }
 
     override fun onDestroyView() {
-        unregisterWebView()
         webView?.apply {
             stopLoading()
             clearHistory()
@@ -99,13 +106,5 @@ class LiveFragment : Fragment() {
         }
         webView = null
         super.onDestroyView()
-    }
-
-    private fun registerWebView() {
-        webView?.let { (activity as? MainActivity)?.registerWebView(it) }
-    }
-
-    private fun unregisterWebView() {
-        webView?.let { (activity as? MainActivity)?.unregisterWebView(it) }
     }
 }
