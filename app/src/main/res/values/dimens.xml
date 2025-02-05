@@ -13,6 +13,7 @@
     <dimen name="icon_size_large">48dp</dimen>
 
     <!-- Margins and padding -->
+    <dimen name="spacing_tiny">4dp</dimen>
     <dimen name="spacing_small">8dp</dimen>
     <dimen name="spacing_medium">16dp</dimen>
     <dimen name="spacing_large">24dp</dimen>

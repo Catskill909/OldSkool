@@ -4,7 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Enhanced tablet support with optimized layouts
+  - Added 2-column grid layout for home screen
+  - Implemented square image tiles with minimal spacing
+  - Created tablet-specific layouts and dimensions
+
 ### Changed
+- Locked app orientation to portrait mode for consistent UX
+- Added immersive mode for fullscreen experience
+  - Implemented using modern WindowInsetsController API
+  - Added fallback support for older Android versions
+  - Enabled edge-to-edge content display
+
 - Simplified bottom navigation implementation
   - Removed custom spacing overrides
   - Reverted to Material Design defaults
