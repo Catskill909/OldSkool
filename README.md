@@ -78,6 +78,11 @@ A native Android application for Old Skool Sessions, featuring enhanced audio pl
 - `OSSMediaManager`: Controls native audio playback
 - `PlayerDetailFragment`: Handles player UI and controls
 
+### Navigation
+- Material Design BottomNavigationView (temporary)
+- Planned custom navigation implementation for better control
+- Documented navigation challenges in `bottom-nav.md`
+
 ## URLs
 
 - Live & Archives: https://oldskoolsessions.com/OSS/

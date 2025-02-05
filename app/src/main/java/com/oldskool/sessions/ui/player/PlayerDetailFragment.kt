@@ -78,27 +78,27 @@ class PlayerDetailFragment : Fragment() {
                 null
             }
 
+            // Load initial state from arguments
+            safeArgs?.let { args ->
+                titleText.text = args.title
+                loadAlbumArt(args.imageUrl)
+
+                args.audioUrl?.let { url ->
+                    Log.d("PlayerDetailFragment", "Preparing audio with URL: $url")
+                    mediaManager.prepareAudio(
+                        url = url,
+                        title = args.title,
+                        artworkUrl = args.imageUrl,
+                        sourceFragmentId = R.id.navigation_player_detail
+                    )
+                }
+            }
+
             // Observe current playback state
             lifecycleScope.launch {
                 mediaManager.currentTitle.collectLatest { title ->
                     if (title != null) {
                         titleText.text = title
-                    } else {
-                        // No current playback, try to start new from arguments
-                        safeArgs?.let { args ->
-                            titleText.text = args.title
-                            loadAlbumArt(args.imageUrl)
-
-                            args.audioUrl?.let { url ->
-                                Log.d("PlayerDetailFragment", "Preparing audio with URL: $url")
-                                mediaManager.prepareAudio(
-                                    url = url,
-                                    title = args.title,
-                                    artworkUrl = args.imageUrl,
-                                    sourceFragmentId = R.id.navigation_player_detail
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -110,8 +110,8 @@ class PlayerDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        mediaManager.release()
         progressUpdateJob?.cancel()
+        mediaManager.destroy()
     }
 
     private fun setupClickListeners() {
@@ -203,13 +203,35 @@ class PlayerDetailFragment : Fragment() {
                 }
             }
         }
+
+        // Observe artwork changes
+        viewLifecycleOwner.lifecycleScope.launch {
+            mediaManager.currentArtwork.collectLatest { artworkUrl ->
+                if (artworkUrl != null) {
+                    loadAlbumArt(artworkUrl)
+                }
+            }
+        }
     }
 
     private fun loadAlbumArt(imageUrl: String?) {
-        if (imageUrl != null) {
+        try {
+            // Clear any existing requests
             Glide.with(requireContext())
-                .load(imageUrl)
-                .into(albumArt)
+                .clear(albumArt)
+            
+            if (imageUrl != null) {
+                Glide.with(requireContext())
+                    .load(imageUrl)
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.placeholder_image)
+                    .into(albumArt)
+            } else {
+                albumArt.setImageResource(R.drawable.placeholder_image)
+            }
+        } catch (e: Exception) {
+            Log.e("PlayerDetailFragment", "Error loading album art", e)
+            albumArt.setImageResource(R.drawable.placeholder_image)
         }
     }
 }

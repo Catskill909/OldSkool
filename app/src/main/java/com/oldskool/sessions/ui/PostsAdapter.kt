@@ -36,12 +36,23 @@ class PostsAdapter(private val onPostClick: (WordPressPost) -> Unit) :
             titleView.text = post.title
 
             // Load image with Glide
-            post.featuredMediaUrl?.let { url ->
-                Glide.with(imageView)
-                    .load(url)
-                    .centerCrop()
-                    .placeholder(R.drawable.placeholder_image)
-                    .into(imageView)
+            try {
+                Glide.with(imageView.context)
+                    .clear(imageView)
+                
+                post.featuredMediaUrl?.let { url ->
+                    Glide.with(imageView.context)
+                        .load(url)
+                        .centerCrop()
+                        .placeholder(R.drawable.placeholder_image)
+                        .error(R.drawable.placeholder_image)
+                        .into(imageView)
+                } ?: run {
+                    imageView.setImageResource(R.drawable.placeholder_image)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PostsAdapter", "Error loading image", e)
+                imageView.setImageResource(R.drawable.placeholder_image)
             }
 
             itemView.setOnClickListener { onPostClick(post) }

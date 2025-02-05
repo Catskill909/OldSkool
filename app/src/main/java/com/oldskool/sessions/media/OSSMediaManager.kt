@@ -17,14 +17,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class OSSMediaManager private constructor(private val context: Context) {
+import java.lang.ref.WeakReference
+
+class OSSMediaManager private constructor(context: Context) {
+    private val contextRef = WeakReference(context.applicationContext)
     companion object {
         @Volatile
         private var instance: OSSMediaManager? = null
         
         fun getInstance(context: Context): OSSMediaManager =
             instance ?: synchronized(this) {
-                instance ?: OSSMediaManager(context.applicationContext).also { instance = it }
+                instance ?: OSSMediaManager(context).also { instance = it }
             }
     }
     private var mediaPlayer: MediaPlayer? = null
@@ -76,9 +79,11 @@ class OSSMediaManager private constructor(private val context: Context) {
 
     init {
         // Start and bind to the media service
-        val intent = Intent(context, OSSMediaService::class.java)
-        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        context.startService(intent)
+        contextRef.get()?.let { ctx ->
+            val intent = Intent(ctx, OSSMediaService::class.java)
+            ctx.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+            ctx.startService(intent)
+        }
     }
 
     private fun loadArtwork(artworkUrl: String?, callback: (Bitmap?) -> Unit) {
@@ -88,10 +93,12 @@ class OSSMediaManager private constructor(private val context: Context) {
         }
 
         try {
-            Glide.with(context)
-                .asBitmap()
-                .load(artworkUrl)
-                .into(object : CustomTarget<Bitmap>() {
+            contextRef.get()?.let { ctx ->
+                Glide.with(ctx)
+                    .asBitmap()
+                    .load(artworkUrl)
+                    .into(object : CustomTarget<Bitmap>() {
+
                     override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                         callback(resource)
                     }
@@ -99,6 +106,7 @@ class OSSMediaManager private constructor(private val context: Context) {
                         callback(null)
                     }
                 })
+            } ?: callback(null)
         } catch (e: Exception) {
             Log.e("OSSMediaManager", "Error loading artwork", e)
             callback(null)
@@ -215,7 +223,7 @@ class OSSMediaManager private constructor(private val context: Context) {
         }
     }
 
-    fun release() {
+    private fun release() {
         mediaPlayer?.apply {
             if (isPlaying) {
                 stop()
@@ -223,9 +231,30 @@ class OSSMediaManager private constructor(private val context: Context) {
             release()
         }
         mediaPlayer = null
+        
+        // Reset all state flows
         _isPlaying.value = false
         _currentPosition.value = 0
         _duration.value = 0
+        _currentTitle.value = null
+        _currentArtwork.value = null
+        
+        // Reset media service state
+        mediaService?.updatePlaybackState(PlaybackStateCompat.STATE_NONE, 0)
+        mediaService?.updateMetadata("", null, null)
+    }
+    
+    fun destroy() {
+        release()
+        try {
+            contextRef.get()?.unbindService(serviceConnection)
+            contextRef.get()?.let { ctx ->
+                ctx.stopService(Intent(ctx, OSSMediaService::class.java))
+            }
+        } catch (e: Exception) {
+            Log.e("OSSMediaManager", "Error unbinding service", e)
+        }
+        mediaService = null
     }
 
 
@@ -234,6 +263,6 @@ class OSSMediaManager private constructor(private val context: Context) {
         val totalSeconds = ms / 1000
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
-        return String.format("%d:%02d", minutes, seconds)
+        return String.format(java.util.Locale.US, "%d:%02d", minutes, seconds)
     }
 }
