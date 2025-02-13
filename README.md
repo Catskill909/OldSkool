@@ -4,6 +4,15 @@ A native Android application for Old Skool Sessions, featuring enhanced audio pl
 
 ## Implementation Status
 
+### ⚠️ Known Issues - Media State Management (2025-02-13)
+
+The media playback system is currently undergoing architectural improvements to address state management challenges:
+
+- First media item plays correctly, subsequent items may have issues
+- Lock screen controls and notification updates need stability improvements
+- See `app/src/main/java/com/oldskool/sessions/media/@state-audit.md` for detailed analysis and roadmap
+
+
 ### Completed Features
 
 #### App Experience

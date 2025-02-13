@@ -1,5 +1,70 @@
 # Media Playback State Audit
 
+## Latest Architectural Analysis (2025-02-13)
+
+### Core State Management Issues
+- First media item loads and plays correctly
+- Subsequent items fail to update metadata
+- Lock screen controls become unresponsive
+- Notification state desyncs from actual playback
+
+### Architectural Pain Points
+1. **Component State Triangle**
+   - MediaSession (playback state)
+   - MediaController (UI state)
+   - NotificationManager (system UI state)
+   - Each component has independent lifecycle
+   - Synchronization failures common
+
+2. **State Ownership Conflicts**
+   - Multiple components trying to manage state
+   - Race conditions during updates
+   - Lifecycle events causing state loss
+
+3. **System Constraints**
+   - Android aggressive service management
+   - Lock screen security boundaries
+   - IPC complexity
+   - Version-specific behavior
+
+## Strategic Recommendations
+
+### 1. Single Source of Truth
+- MediaService as primary state owner
+- All other components observe only
+- Implement unidirectional data flow
+- Use StateFlow for state management
+
+### 2. Lifecycle-Aware Design
+- Proper foreground service implementation
+- Handle all lifecycle transitions
+- Maintain token validity
+- Implement automatic reconnection
+
+### 3. State Validation Protocol
+- Add validation checkpoints
+- Implement comprehensive logging
+- Create state recovery mechanisms
+- Monitor state transitions
+
+## Implementation Roadmap
+
+### Phase 1: Stabilization
+- [ ] Implement robust service binding
+- [ ] Add comprehensive state logging
+- [ ] Create error recovery mechanisms
+
+### Phase 2: Architecture Evolution
+- [ ] Move to unidirectional data flow
+- [ ] Implement state machine
+- [ ] Add validation checkpoints
+
+### Phase 3: Monitoring
+- [ ] Add telemetry
+- [ ] Implement automatic recovery
+- [ ] Create self-healing mechanisms
+
+
 ## OSSMediaManager State
 - `mediaPlayer`: MediaPlayer instance
   - Initialized: When preparing audio
