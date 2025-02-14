@@ -25,7 +25,6 @@ import kotlinx.coroutines.launch
 class PlayerDetailFragment : Fragment() {
 
     private lateinit var mediaManager: OSSMediaManager
-    private val args: PlayerDetailFragmentArgs by navArgs()
 
     // UI Components
     private lateinit var backButton: View
@@ -69,50 +68,33 @@ class PlayerDetailFragment : Fragment() {
             setupProgressBar()
             setupObservers()
 
-            // Get arguments safely
-            val safeArgs = try {
-                navArgs<PlayerDetailFragmentArgs>().value
+            // Get arguments using the proper type constraint
+            val args = try {
+                val navArgs: PlayerDetailFragmentArgs by navArgs()
+                navArgs
             } catch (e: Exception) {
                 Log.e("PlayerDetailFragment", "Failed to get arguments: ${e.message}")
-                // Don't navigate up, just use current state
-                null
+                findNavController().navigateUp()
+                return
             }
 
-            // Load initial state from arguments
-            safeArgs?.let { args ->
-                titleText.text = args.title
-                loadAlbumArt(args.imageUrl)
+            // Set initial state and prepare audio
+            titleText.text = args.title
+            loadAlbumArt(args.imageUrl)
 
-                args.audioUrl?.let { url ->
-                    Log.d("PlayerDetailFragment", "Preparing audio with URL: $url")
-                    mediaManager.prepareAudio(
-                        url = url,
-                        title = args.title,
-                        artworkUrl = args.imageUrl,
-                        sourceFragmentId = R.id.navigation_player_detail
-                    )
-                }
-            }
+            Log.d("PlayerDetailFragment", "Preparing audio with URL: ${args.audioUrl}")
+            mediaManager.prepareAudio(
+                url = args.audioUrl,
+                title = args.title,
+                artworkUrl = args.imageUrl,
+                sourceFragmentId = R.id.navigation_player_detail
+            )
 
-            // Observe current playback state
-            lifecycleScope.launch {
-                mediaManager.currentTitle.collectLatest { title ->
-                    if (title != null) {
-                        titleText.text = title
-                    }
-                }
-            }
+            // Observe media manager state
+            observePlaybackState()
         } catch (e: Exception) {
             Log.e("PlayerDetailFragment", "Error in onViewCreated: ${e.message}")
             findNavController().navigateUp()
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // Stop playback when leaving the detail view
-        if (mediaManager.isPlaying.value) {
-            mediaManager.togglePlayPause()
         }
     }
 
@@ -183,6 +165,16 @@ class PlayerDetailFragment : Fragment() {
             Log.e("PlayerDetailFragment", "Error setting up progress bar", e)
             // Disable progress bar if setup fails
             progressBar.isEnabled = false
+        }
+    }
+
+    private fun observePlaybackState() {
+        lifecycleScope.launch {
+            mediaManager.currentTitle.collectLatest { title ->
+                if (title != null) {
+                    titleText.text = title
+                }
+            }
         }
     }
 

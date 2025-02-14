@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.media.MediaPlayer
 import android.os.IBinder
+import android.os.PowerManager
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import com.bumptech.glide.Glide
@@ -16,7 +17,6 @@ import com.bumptech.glide.request.transition.Transition
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
 import java.lang.ref.WeakReference
 
 class OSSMediaManager private constructor(context: Context) {
@@ -30,6 +30,7 @@ class OSSMediaManager private constructor(context: Context) {
                 instance ?: OSSMediaManager(context).also { instance = it }
             }
     }
+
     private var mediaPlayer: MediaPlayer? = null
     private var mediaService: OSSMediaService? = null
     private var sourceFragmentId: Int = 0
@@ -194,6 +195,7 @@ class OSSMediaManager private constructor(context: Context) {
             // Create and prepare new player first
             Log.d("OSSMediaManager", "2. Creating new player instance")
             mediaPlayer = MediaPlayer().apply {
+                setWakeMode(contextRef.get(), PowerManager.PARTIAL_WAKE_LOCK)
                 setDataSource(url)
                 setOnPreparedListener {
                     Log.d("OSSMediaManager", "3. Media prepared")
@@ -402,8 +404,6 @@ class OSSMediaManager private constructor(context: Context) {
         }
         mediaService = null
     }
-
-
 
     fun formatTime(ms: Long): String {
         val totalSeconds = ms / 1000
