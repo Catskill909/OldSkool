@@ -35,11 +35,23 @@ class OSSMediaService : MediaBrowserServiceCompat() {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "com.oldskool.sessions.media.PLAYBACK"
         private const val MEDIA_ROOT_ID = "media_root_id"
+        
+        private fun playbackStateToString(state: Int): String = when (state) {
+            PlaybackStateCompat.STATE_NONE -> "STATE_NONE"
+            PlaybackStateCompat.STATE_PLAYING -> "STATE_PLAYING"
+            PlaybackStateCompat.STATE_PAUSED -> "STATE_PAUSED"
+            PlaybackStateCompat.STATE_STOPPED -> "STATE_STOPPED"
+            PlaybackStateCompat.STATE_ERROR -> "STATE_ERROR"
+            else -> "STATE_UNKNOWN($state)"
+        }
     }
 
     private lateinit var mediaSession: MediaSessionCompat
     private lateinit var stateBuilder: PlaybackStateCompat.Builder
     private lateinit var notificationManager: NotificationManager
+    
+    // Cache the last known metadata to handle reconnection scenarios
+    private var lastMetadata: MediaMetadataCompat? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -49,11 +61,23 @@ class OSSMediaService : MediaBrowserServiceCompat() {
             setCallback(mediaSessionCallback)
             setSessionToken(sessionToken)
 
-            // Set initial playback state with minimal controls
+            // Set initial playback state with all possible actions
             setPlaybackState(PlaybackStateCompat.Builder()
                 .setState(PlaybackStateCompat.STATE_NONE, 0, 1.0f)
-                .setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE)
+                .setActions(
+                    PlaybackStateCompat.ACTION_PLAY or
+                    PlaybackStateCompat.ACTION_PAUSE or
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                    PlaybackStateCompat.ACTION_STOP or
+                    PlaybackStateCompat.ACTION_SEEK_TO
+                )
                 .build())
+        }
+
+        // Restore last known metadata if available
+        lastMetadata?.let { metadata ->
+            Log.d("OSSMediaService", "Restoring previous metadata: ${metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE)}")
+            mediaSession.setMetadata(metadata)
         }
 
         // Initialize the playback state with minimal controls
@@ -145,7 +169,9 @@ class OSSMediaService : MediaBrowserServiceCompat() {
         }
     }
 
-    private fun createNotification(metadata: MediaMetadataCompat, @Suppress("UNUSED_PARAMETER") state: PlaybackStateCompat): Notification {
+    private fun createNotification(metadata: MediaMetadataCompat, state: PlaybackStateCompat): Notification {
+        // Ensure we have the latest metadata from the session
+        val currentMetadata = mediaSession.controller.metadata ?: metadata
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
 
         // Create content intent
@@ -163,9 +189,9 @@ class OSSMediaService : MediaBrowserServiceCompat() {
         )
 
         // Configure the notification
-        builder.setContentTitle(metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
-            .setContentText(metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST))
-            .setLargeIcon(metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
+        builder.setContentTitle(currentMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
+            .setContentText(currentMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST))
+            .setLargeIcon(currentMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(contentPendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -182,30 +208,97 @@ class OSSMediaService : MediaBrowserServiceCompat() {
     }
 
     fun updateMetadata(title: String, artist: String?, artwork: Bitmap?) {
-        val builder = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
-
-        artwork?.let {
-            builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
+        try {
+            Log.d("OSSMediaService", "Updating metadata: title=$title, hasArtwork=${artwork != null}")
+            
+            val metadata = MediaMetadataCompat.Builder().apply {
+                putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
+                
+                artwork?.let {
+                    try {
+                        putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
+                    } catch (e: Exception) {
+                        Log.e("OSSMediaService", "Error setting artwork bitmap", e)
+                    }
+                }
+            }.build()
+            
+            // Cache the metadata
+            lastMetadata = metadata
+            
+            Log.d("OSSMediaService", "Setting metadata on media session - Title: ${metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE)}")
+            mediaSession.setMetadata(metadata)
+            
+            // Verify media session state after update
+            val sessionMetadata = mediaSession.controller.metadata
+            Log.d("OSSMediaService", "Media session metadata after update - Title: ${sessionMetadata?.getString(MediaMetadataCompat.METADATA_KEY_TITLE)}")
+            
+            // Force notification update with latest metadata
+            val state = mediaSession.controller.playbackState
+            if (state != null) {
+                // Create fresh notification with latest metadata
+                val notification = createNotification(metadata, state)
+                
+                // Update notification based on playback state
+                if (state.state == PlaybackStateCompat.STATE_PLAYING) {
+                    startForeground(NOTIFICATION_ID, notification)
+                } else {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_DETACH)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        stopForeground(false)
+                    }
+                    notificationManager.notify(NOTIFICATION_ID, notification)
+                }
+            }
+            
+            Log.d("OSSMediaService", "Metadata update complete")
+        } catch (e: Exception) {
+            Log.e("OSSMediaService", "Error updating metadata", e)
+            // Try to recover using cached metadata
+            lastMetadata?.let { cachedMetadata ->
+                Log.d("OSSMediaService", "Attempting recovery with cached metadata")
+                mediaSession.setMetadata(cachedMetadata)
+            }
         }
-
-        mediaSession.setMetadata(builder.build())
     }
 
     fun updatePlaybackState(state: Int, position: Long) {
+        Log.d("OSSMediaService", "=== Playback State Change ===")
+        Log.d("OSSMediaService", "Updating state to: ${playbackStateToString(state)}, position: $position")
+        Log.d("OSSMediaService", "Current metadata: ${mediaSession.controller.metadata?.getString(MediaMetadataCompat.METADATA_KEY_TITLE)}")
+        
+        // Set available actions based on state
+        val actions = PlaybackStateCompat.ACTION_PLAY or
+                     PlaybackStateCompat.ACTION_PAUSE or
+                     PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                     PlaybackStateCompat.ACTION_STOP or
+                     PlaybackStateCompat.ACTION_SEEK_TO
+
+        // Log state transition
+        Log.d("OSSMediaService", "State transition: ${playbackStateToString(state)}")
+        Log.d("OSSMediaService", "Metadata present: ${mediaSession.controller.metadata != null}")
+        
         val playbackState = stateBuilder
+            .setActions(actions)
             .setState(state, position, 1.0f)
             .build()
         mediaSession.setPlaybackState(playbackState)
 
-        // Update notification
-        val notification = createNotification(mediaSession.controller.metadata, playbackState)
+        // Update notification with fresh metadata
+        val currentMetadata = mediaSession.controller.metadata
+        Log.d("OSSMediaService", "Creating notification with metadata: ${currentMetadata?.getString(MediaMetadataCompat.METADATA_KEY_TITLE)}")
+        val notification = createNotification(currentMetadata ?: lastMetadata ?: MediaMetadataCompat.Builder().build(), playbackState)
         
         // Show as foreground service when playing
         if (state == PlaybackStateCompat.STATE_PLAYING) {
+            Log.d("OSSMediaService", "Starting foreground service with notification")
+            Log.d("OSSMediaService", "Notification metadata: ${notification.extras?.getString(NotificationCompat.EXTRA_TITLE)}")
             startForeground(NOTIFICATION_ID, notification)
         } else {
+            Log.d("OSSMediaService", "Updating notification in background state: ${playbackStateToString(state)}")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_DETACH)
             } else {
@@ -213,6 +306,7 @@ class OSSMediaService : MediaBrowserServiceCompat() {
                 stopForeground(false)
             }
             notificationManager.notify(NOTIFICATION_ID, notification)
+            Log.d("OSSMediaService", "Background notification updated with metadata: ${notification.extras?.getString(NotificationCompat.EXTRA_TITLE)}")
         }
     }
 }

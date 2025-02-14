@@ -108,10 +108,27 @@ class PlayerDetailFragment : Fragment() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Stop playback when leaving the detail view
+        if (mediaManager.isPlaying.value) {
+            mediaManager.togglePlayPause()
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         progressUpdateJob?.cancel()
-        mediaManager.destroy()
+        // Reset playback state but preserve metadata
+        mediaManager.cleanupPlayback()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Only destroy media manager when the app is finishing
+        if (requireActivity().isFinishing) {
+            mediaManager.destroy()
+        }
     }
 
     private fun setupClickListeners() {
