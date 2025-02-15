@@ -160,6 +160,7 @@ class OSSMediaManager private constructor(context: Context) {
             reset()
         }
         _isPlaying.value = false
+        _currentPosition.value = 0  // Reset position to start
         
         // Update media session state but preserve metadata
         mediaService?.updatePlaybackState(
@@ -235,11 +236,17 @@ class OSSMediaManager private constructor(context: Context) {
                 }
                 setOnCompletionListener {
                     Log.d("OSSMediaManager", "Playback completed")
-                    _isPlaying.value = false
-                    mediaService?.updatePlaybackState(
-                        PlaybackStateCompat.STATE_STOPPED,
-                        duration.toLong()
-                    )
+                    try {
+                        _isPlaying.value = false
+                        seekTo(0) // Reset MediaPlayer position first
+                        _currentPosition.value = 0
+                        mediaService?.updatePlaybackState(
+                            PlaybackStateCompat.STATE_STOPPED,
+                            0L
+                        )
+                    } catch (e: Exception) {
+                        Log.e("OSSMediaManager", "Error updating state on completion", e)
+                    }
                 }
                 setOnErrorListener { _, what, extra ->
                     Log.e("OSSMediaManager", "Media player error: what=$what extra=$extra")
@@ -330,10 +337,15 @@ class OSSMediaManager private constructor(context: Context) {
     }
 
     fun updateProgress() {
-        mediaPlayer?.let { player ->
-            if (player.isPlaying) {
-                _currentPosition.value = player.currentPosition.toLong()
+        try {
+            mediaPlayer?.let { player ->
+                if (_isPlaying.value) {
+                    val position = player.currentPosition.toLong()
+                    _currentPosition.value = position
+                }
             }
+        } catch (e: Exception) {
+            Log.e("OSSMediaManager", "Error updating progress", e)
         }
     }
 

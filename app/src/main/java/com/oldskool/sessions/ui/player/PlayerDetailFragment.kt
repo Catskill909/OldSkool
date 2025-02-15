@@ -199,16 +199,25 @@ class PlayerDetailFragment : Fragment() {
 
         progressUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
-                mediaManager.updateProgress()
-                delay(1000) // Update every second
+                try {
+                    mediaManager.updateProgress()
+                    delay(1000) // Update every second
+                } catch (e: Exception) {
+                    Log.e("PlayerDetailFragment", "Error updating progress", e)
+                    delay(1000) // Still delay on error
+                }
             }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
             mediaManager.currentPosition.collectLatest { position ->
-                if (!userIsSeeking) {
-                    progressBar.progress = position.toInt()
-                    currentTime.text = mediaManager.formatTime(position)
+                try {
+                    if (!userIsSeeking) {
+                        progressBar.progress = position.toInt()
+                        currentTime.text = mediaManager.formatTime(position)
+                    }
+                } catch (e: Exception) {
+                    Log.e("PlayerDetailFragment", "Error updating UI position", e)
                 }
             }
         }
