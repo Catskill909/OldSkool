@@ -93,6 +93,7 @@
             android:progressBackgroundTint="@android:color/darker_gray"
             android:progressTint="@android:color/white"
             android:thumbTint="@android:color/white"
+            android:visibility="invisible"
             app:layout_constraintBottom_toTopOf="@id/timeContainer"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />

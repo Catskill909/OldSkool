@@ -16,4 +16,11 @@
     <dimen name="spacing_small">12dp</dimen>
     <dimen name="spacing_medium">20dp</dimen>
     <dimen name="spacing_large">32dp</dimen>
+
+    <!-- Bottom Navigation for tablets -->
+    <dimen name="bottom_nav_height">90dp</dimen>
+    <dimen name="bottom_nav_icon_size">56dp</dimen>
+    <dimen name="bottom_nav_text_size">22sp</dimen>
+    <dimen name="bottom_nav_padding">8dp</dimen>
+    <dimen name="bottom_nav_item_spacing">2dp</dimen>
 </resources>
