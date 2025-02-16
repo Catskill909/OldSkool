@@ -8,6 +8,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
 import com.oldskool.sessions.databinding.FragmentWebviewBinding
+import com.oldskool.sessions.ui.LoadingUtils.showLoading
+import com.oldskool.sessions.ui.LoadingUtils.hideLoading
 
 class WebViewFragment : Fragment() {
     private var _binding: FragmentWebviewBinding? = null
@@ -27,7 +29,17 @@ class WebViewFragment : Fragment() {
         
         binding.webView.apply {
             settings.javaScriptEnabled = true
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    binding.webView.showLoading()
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    binding.webView.hideLoading()
+                }
+            }
         }
 
         arguments?.getString("url")?.let { url ->
@@ -37,6 +49,7 @@ class WebViewFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        binding.webView.hideLoading() // Clean up any loading state
         _binding = null
     }
 }

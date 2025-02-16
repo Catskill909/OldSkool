@@ -9,10 +9,13 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.ProgressBar
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 
 class LiveFragment : Fragment() {
     private var webView: WebView? = null
+    private var progressBar: ProgressBar? = null
     private var lastUrl: String? = null
     private var isAudioPlaying: Boolean = false
 
@@ -23,6 +26,7 @@ class LiveFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        progressBar = view.findViewById(R.id.loadingProgressBar)
         setupWebView(view)
     }
 
@@ -57,8 +61,14 @@ class LiveFragment : Fragment() {
             setOnCreateContextMenuListener(null) // Disable context menu
             isLongClickable = false // Disable long press menu
             webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    progressBar?.isVisible = true
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    progressBar?.isVisible = false
                     lastUrl = url
                 }
             }
@@ -105,6 +115,7 @@ class LiveFragment : Fragment() {
             loadUrl("about:blank")
         }
         webView = null
+        progressBar = null
         super.onDestroyView()
     }
 }
