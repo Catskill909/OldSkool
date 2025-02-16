@@ -32,12 +32,12 @@ class WebViewFragment : Fragment() {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                     super.onPageStarted(view, url, favicon)
-                    binding.webView.showLoading()
+                    binding.root.showLoading()
                 }
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    binding.webView.hideLoading()
+                    binding.root.hideLoading()
                 }
             }
         }
@@ -49,7 +49,7 @@ class WebViewFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        binding.webView.hideLoading() // Clean up any loading state
+        binding.root.hideLoading() // Clean up any loading state
         _binding = null
     }
 }
