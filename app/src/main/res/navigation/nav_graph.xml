@@ -26,17 +26,17 @@
 
     <fragment
         android:id="@+id/navigation_live"
-        android:name="com.oldskool.sessions.ui.LiveFragment"
+        android:name="com.oldskool.sessions.LiveFragment"
         android:label="@string/live" />
 
     <fragment
         android:id="@+id/navigation_info"
-        android:name="com.oldskool.sessions.ui.InfoFragment"
+        android:name="com.oldskool.sessions.InfoFragment"
         android:label="@string/info" />
 
     <fragment
         android:id="@+id/navigation_contact"
-        android:name="com.oldskool.sessions.ui.ContactFragment"
+        android:name="com.oldskool.sessions.ContactFragment"
         android:label="@string/contact" />
         
     <fragment

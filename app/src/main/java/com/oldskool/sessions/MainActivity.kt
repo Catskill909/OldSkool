@@ -9,6 +9,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import androidx.navigation.ui.onNavDestinationSelected
 import com.oldskool.sessions.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -45,6 +46,20 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         binding.bottomNavigation.setupWithNavController(navController)
+
+        // Add custom handling for home tab
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.navigation_home -> {
+                    navController.popBackStack(R.id.navigation_home, false)
+                    true
+                }
+                else -> {
+                    navController.navigate(item.itemId)
+                    true
+                }
+            }
+        }
 
         handleIntent(intent)
     }
