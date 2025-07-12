@@ -78,6 +78,7 @@ class OSSPlayerService : MediaLibraryService() {
         
         // Action constants for intent communication
         const val ACTION_PLAY = "com.oldskool.sessions.media.PLAY"
+        const val ACTION_LOAD = "com.oldskool.sessions.media.LOAD"
         const val ACTION_PAUSE = "com.oldskool.sessions.media.PAUSE"
         const val ACTION_TOGGLE_PLAYBACK = "com.oldskool.sessions.media.TOGGLE_PLAYBACK"
         const val ACTION_STOP = "com.oldskool.sessions.media.STOP"
@@ -104,6 +105,12 @@ class OSSPlayerService : MediaLibraryService() {
             ACTION_PLAY -> {
                 intent.getParcelableExtra<AudioItem>(EXTRA_AUDIO_ITEM)?.let { audioItem ->
                     playAudio(audioItem)
+                }
+            }
+            ACTION_LOAD -> {
+                intent.getParcelableExtra<AudioItem>(EXTRA_AUDIO_ITEM)?.let { audioItem ->
+                    // Load audio without starting playback
+                    loadAudioOnly(audioItem)
                 }
             }
             ACTION_TOGGLE_PLAYBACK -> {
@@ -166,18 +173,45 @@ class OSSPlayerService : MediaLibraryService() {
 
     fun playAudio(item: AudioItem) {
         serviceScope.launch {
+            _currentItem.value = item
+            
             try {
-                _currentItem.value = item
-
-                // Create MediaItem with metadata
+                // Create MediaItem from AudioItem
                 val mediaItem = createMediaItemFromAudioItem(item)
                 
-                // Set the media item to the player
+                // Set media item to player and start playback
                 player.setMediaItem(mediaItem)
                 player.prepare()
-                player.playWhenReady = true
+                player.playWhenReady = true  // Set to auto-play when ready
+                
+                // Update album art for notification
+                loadArtwork(item.albumArtUrl)
             } catch (e: Exception) {
                 Log.e(TAG, "Error playing audio", e)
+            }
+        }
+    }
+
+    /**
+     * Load audio without starting playback
+     */
+    fun loadAudioOnly(item: AudioItem) {
+        serviceScope.launch {
+            _currentItem.value = item
+            
+            try {
+                // Create MediaItem from AudioItem
+                val mediaItem = createMediaItemFromAudioItem(item)
+                
+                // Set media item to player and prepare without playing
+                player.setMediaItem(mediaItem)
+                player.prepare()
+                player.playWhenReady = false  // Explicitly set not to play when ready
+                
+                // Update album art for notification
+                loadArtwork(item.albumArtUrl)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading audio", e)
             }
         }
     }

@@ -138,6 +138,20 @@ class OSSPlayerController(private val context: Context) : DefaultLifecycleObserv
     }
     
     /**
+     * Load an audio item without auto-playing - this prepares the audio without starting playback
+     */
+    fun loadAudio(item: AudioItem) {
+        val intent = Intent(context, OSSPlayerService::class.java).apply {
+            action = OSSPlayerService.ACTION_LOAD
+            putExtra(OSSPlayerService.EXTRA_AUDIO_ITEM, item)
+        }
+        context.startService(intent)
+        
+        // Update UI state immediately for better user experience
+        _currentItem.postValue(item)
+    }
+    
+    /**
      * Toggle between play and pause
      */
     fun togglePlayPause() {

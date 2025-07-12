@@ -107,8 +107,8 @@ class PlayerDetailFragmentMedia3 : Fragment() {
                 sourceFragmentId = R.id.navigation_player_detail_media3 // Using the Media3 fragment ID
             )
             
-            // Play the audio using our new controller
-            playerController.playAudio(audioItem)
+            // Load the audio without auto-playing using our new controller
+            playerController.loadAudio(audioItem)
         } catch (e: Exception) {
             Log.e("PlayerDetailFragment", "Error in onViewCreated: ${e.message}")
             findNavController().navigateUp()
@@ -123,6 +123,8 @@ class PlayerDetailFragmentMedia3 : Fragment() {
 
     private fun setupClickListeners() {
         backButton.setOnClickListener {
+            // Stop the playback when navigating back
+            playerController.stop()
             findNavController().navigateUp()
         }
 
