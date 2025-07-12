@@ -70,11 +70,38 @@ class OSSMediaManager private constructor(context: Context) {
             val binder = service as OSSMediaService.LocalBinder
             mediaService = binder.getService()
             mediaService?.setCallback(object : OSSMediaService.Callback {
-                override fun onPlayPauseClicked() {
-                    togglePlayPause()
+                override fun onPlayClicked() {
+                    Log.d("OSSMediaManager", "Notification PLAY action received")
+                    if (!_isPlaying.value) {
+                        togglePlayPause()
+                    }
+                }
+                
+                override fun onPauseClicked() {
+                    Log.d("OSSMediaManager", "Notification PAUSE action received")
+                    if (_isPlaying.value) {
+                        togglePlayPause()
+                    }
+                }
+                
+                override fun onStopClicked() {
+                    Log.d("OSSMediaManager", "Notification STOP action received")
+                    try {
+                        mediaPlayer?.let { player ->
+                            if (player.isPlaying) {
+                                player.stop()
+                            }
+                            _isPlaying.value = false
+                            mediaService?.updatePlaybackState(PlaybackStateCompat.STATE_STOPPED, 0)
+                            // Could also call release() to fully clean up resources
+                        }
+                    } catch (e: Exception) {
+                        Log.e("OSSMediaManager", "Error stopping playback", e)
+                    }
                 }
                 
                 override fun onSeekTo(position: Long) {
+                    Log.d("OSSMediaManager", "Notification SEEK action received: $position")
                     seekTo(position)
                 }
 

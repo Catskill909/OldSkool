@@ -15,6 +15,13 @@
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+        <action
+            android:id="@+id/action_home_to_player_detail_media3"
+            app:destination="@id/navigation_player_detail_media3"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
 
 
@@ -64,5 +71,31 @@
             app:popUpTo="@id/navigation_player_detail"
             app:popUpToInclusive="true" />
 
+    </fragment>
+    <!-- New Media3-based player fragment for ONE AUDIO TRUTH architecture -->
+    <fragment
+        android:id="@+id/navigation_player_detail_media3"
+        android:name="com.oldskool.sessions.ui.player.PlayerDetailFragmentMedia3"
+        android:label="@string/player">
+        <argument
+            android:name="title"
+            app:argType="string"
+            android:defaultValue="Now Playing" />
+        <argument
+            android:name="audioUrl"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="imageUrl"
+            app:argType="string"
+            android:defaultValue="" />
+        <deepLink
+            app:uri="oldskool://player/media3" />
+        <action
+            android:id="@+id/action_global_player_detail_media3"
+            app:destination="@+id/navigation_player_detail_media3"
+            app:launchSingleTop="true"
+            app:popUpTo="@id/navigation_player_detail_media3"
+            app:popUpToInclusive="true" />
     </fragment>
 </navigation>

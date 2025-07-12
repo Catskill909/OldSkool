@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -60,6 +61,16 @@ class OSSMediaService : MediaBrowserServiceCompat() {
         mediaSession = MediaSessionCompat(baseContext, "OSSMediaService").apply {
             setCallback(mediaSessionCallback)
             setSessionToken(sessionToken)
+            
+            // Enable media button callbacks
+            setMediaButtonReceiver(PendingIntent.getBroadcast(
+                baseContext,
+                0,
+                Intent(Intent.ACTION_MEDIA_BUTTON).setComponent(
+                    ComponentName(packageName, MediaButtonReceiver::class.java.name)
+                ),
+                PendingIntent.FLAG_IMMUTABLE
+            ))
 
             // Set initial playback state with all possible actions
             setPlaybackState(PlaybackStateCompat.Builder()
@@ -73,6 +84,13 @@ class OSSMediaService : MediaBrowserServiceCompat() {
                 )
                 .build())
         }
+        
+        // Handle media buttons that come through broadcast receiver
+        val mediaButtonIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+        mediaButtonIntent.setClass(this, MediaButtonReceiver::class.java)
+        val mediaPendingIntent = PendingIntent.getBroadcast(
+            this, 0, mediaButtonIntent, PendingIntent.FLAG_IMMUTABLE
+        )
 
         // Restore last known metadata if available
         lastMetadata?.let { metadata ->
@@ -90,7 +108,9 @@ class OSSMediaService : MediaBrowserServiceCompat() {
     }
 
     interface Callback {
-        fun onPlayPauseClicked()
+        fun onPlayClicked()
+        fun onPauseClicked()
+        fun onStopClicked()
         fun onSeekTo(position: Long)
         fun getSourceFragmentId(): Int
     }
@@ -104,7 +124,8 @@ class OSSMediaService : MediaBrowserServiceCompat() {
     private val mediaSessionCallback = object : MediaSessionCompat.Callback() {
         override fun onPlay() {
             try {
-                callback?.onPlayPauseClicked()
+                Log.d("OSSMediaService", "MediaSession.Callback.onPlay() called")
+                callback?.onPlayClicked()
             } catch (e: Exception) {
                 Log.e("OSSMediaService", "Error in onPlay", e)
             }
@@ -112,7 +133,8 @@ class OSSMediaService : MediaBrowserServiceCompat() {
 
         override fun onPause() {
             try {
-                callback?.onPlayPauseClicked()
+                Log.d("OSSMediaService", "MediaSession.Callback.onPause() called")
+                callback?.onPauseClicked()
             } catch (e: Exception) {
                 Log.e("OSSMediaService", "Error in onPause", e)
             }
@@ -120,7 +142,8 @@ class OSSMediaService : MediaBrowserServiceCompat() {
 
         override fun onStop() {
             try {
-                callback?.onPlayPauseClicked()
+                Log.d("OSSMediaService", "MediaSession.Callback.onStop() called")
+                callback?.onStopClicked()
             } catch (e: Exception) {
                 Log.e("OSSMediaService", "Error in onStop", e)
             }
@@ -187,6 +210,21 @@ class OSSMediaService : MediaBrowserServiceCompat() {
             PendingIntent.FLAG_UPDATE_CURRENT or 
             PendingIntent.FLAG_IMMUTABLE
         )
+        
+        // Create media control actions
+        val playPauseAction: NotificationCompat.Action = if (state.state == PlaybackStateCompat.STATE_PLAYING) {
+            // Create pause action
+            val pauseIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE)
+            NotificationCompat.Action(R.drawable.baseline_pause_24, "Pause", pauseIntent)
+        } else {
+            // Create play action
+            val playIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY)
+            NotificationCompat.Action(R.drawable.baseline_play_arrow_24, "Play", playIntent)
+        }
+        
+        // Create stop action
+        val stopIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP)
+        val stopAction = NotificationCompat.Action(R.drawable.baseline_stop_24, "Stop", stopIntent)
 
         // Configure the notification
         builder.setContentTitle(currentMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
@@ -198,11 +236,16 @@ class OSSMediaService : MediaBrowserServiceCompat() {
             .setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()
                     .setMediaSession(mediaSession.sessionToken)
+                    .setShowActionsInCompactView(0, 1) // Show both actions in compact view
             )
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setShowWhen(false)
             .setOngoing(true)
             .setAutoCancel(false)
+        
+        // Add media actions to notification
+        builder.addAction(playPauseAction)
+        builder.addAction(stopAction)
 
         return builder.build()
     }

@@ -47,13 +47,25 @@ class HomeFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = PostsAdapter { post ->
-            findNavController().navigate(
-                HomeFragmentDirections.actionHomeToPlayerDetail(
-                    title = post.title ?: "No Title",
-                    audioUrl = post.audioUrl ?: "",
-                    imageUrl = post.featuredMediaUrl ?: ""
+            // Use the new Media3 player fragment
+            try {
+                findNavController().navigate(
+                    HomeFragmentDirections.actionHomeToPlayerDetailMedia3(
+                        title = post.title ?: "No Title",
+                        audioUrl = post.audioUrl ?: "",
+                        imageUrl = post.featuredMediaUrl ?: ""
+                    )
                 )
-            )
+            } catch (e: Exception) {
+                // Fallback to legacy player if there's an issue
+                findNavController().navigate(
+                    HomeFragmentDirections.actionHomeToPlayerDetail(
+                        title = post.title ?: "No Title",
+                        audioUrl = post.audioUrl ?: "",
+                        imageUrl = post.featuredMediaUrl ?: ""
+                    )
+                )
+            }
         }
 
         recyclerView.apply {

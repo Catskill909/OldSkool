@@ -11,20 +11,25 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
 import com.oldskool.sessions.R
-import com.oldskool.sessions.media.OSSMediaManager
+import com.oldskool.sessions.media.OSSPlayerController
+import com.oldskool.sessions.models.AudioItem
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class PlayerDetailFragment : Fragment() {
+/**
+ * Updated PlayerDetailFragment that uses the Media3-based OSSPlayerController.
+ * This fragment is part of the ONE AUDIO TRUTH architecture.
+ */
+class PlayerDetailFragmentMedia3 : Fragment() {
 
-    private lateinit var mediaManager: OSSMediaManager
+    private lateinit var playerController: OSSPlayerController
 
     // UI Components
     private lateinit var backButton: View
@@ -65,8 +70,11 @@ class PlayerDetailFragment : Fragment() {
             currentTime.text = "00:00"
             totalTime.text = "--:--"
 
-            // Initialize MediaManager
-            mediaManager = OSSMediaManager.getInstance(requireContext())
+            // Initialize PlayerController - this is our ONE AUDIO TRUTH controller
+            playerController = OSSPlayerController.getInstance(requireContext())
+            
+            // Register this fragment with the lifecycle owner so the controller can respond to lifecycle events
+            lifecycle.addObserver(playerController)
 
             setupClickListeners()
             setupProgressBar()
@@ -87,15 +95,20 @@ class PlayerDetailFragment : Fragment() {
             loadAlbumArt(args.imageUrl)
 
             Log.d("PlayerDetailFragment", "Preparing audio with URL: ${args.audioUrl}")
-            mediaManager.prepareAudio(
-                url = args.audioUrl,
+            
+            // Convert to AudioItem model for the new architecture
+            val audioItem = AudioItem(
+                id = System.currentTimeMillis().toString(), // Generate a unique ID
                 title = args.title,
-                artworkUrl = args.imageUrl,
-                sourceFragmentId = R.id.navigation_player_detail
+                artist = null, // This can be added to the navigation args if needed
+                album = null,  // This can be added to the navigation args if needed
+                audioUrl = args.audioUrl, // Now directly using String
+                albumArtUrl = args.imageUrl,
+                sourceFragmentId = R.id.navigation_player_detail_media3 // Using the Media3 fragment ID
             )
-
-            // Observe media manager state
-            observePlaybackState()
+            
+            // Play the audio using our new controller
+            playerController.playAudio(audioItem)
         } catch (e: Exception) {
             Log.e("PlayerDetailFragment", "Error in onViewCreated: ${e.message}")
             findNavController().navigateUp()
@@ -105,16 +118,7 @@ class PlayerDetailFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         progressUpdateJob?.cancel()
-        // Reset playback state but preserve metadata
-        mediaManager.cleanupPlayback()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Only destroy media manager when the app is finishing
-        if (requireActivity().isFinishing) {
-            mediaManager.destroy()
-        }
+        // No need to manually clean up - the lifecycle observer handles it
     }
 
     private fun setupClickListeners() {
@@ -123,13 +127,7 @@ class PlayerDetailFragment : Fragment() {
         }
 
         playPauseButton.setOnClickListener {
-            try {
-                mediaManager.togglePlayPause()
-            } catch (e: Exception) {
-                Log.e("PlayerDetailFragment", "Error toggling play/pause", e)
-                // Disable the button if we hit an error
-                playPauseButton.isEnabled = false
-            }
+            playerController.togglePlayPause()
         }
     }
 
@@ -137,12 +135,8 @@ class PlayerDetailFragment : Fragment() {
         try {
             progressBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    try {
-                        if (fromUser) {
-                            currentTime.text = mediaManager.formatTime(progress.toLong())
-                        }
-                    } catch (e: Exception) {
-                        Log.e("PlayerDetailFragment", "Error updating progress text", e)
+                    if (fromUser) {
+                        currentTime.text = formatTime(progress.toLong())
                     }
                 }
 
@@ -155,7 +149,7 @@ class PlayerDetailFragment : Fragment() {
                         userIsSeeking = false
                         seekBar?.progress?.let { progress ->
                             if (progress >= 0) {
-                                mediaManager.seekTo(progress.toLong())
+                                playerController.seekTo(progress.toLong())
                             }
                         }
                     } catch (e: Exception) {
@@ -172,66 +166,59 @@ class PlayerDetailFragment : Fragment() {
         }
     }
 
-    private fun observePlaybackState() {
-        lifecycleScope.launch {
-            mediaManager.currentTitle.collectLatest { title ->
-                if (title != null) {
-                    titleText.text = title
-                }
-            }
-        }
-    }
-
     private fun setupObservers() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            mediaManager.isPlaying.collectLatest { isPlaying ->
-                playPauseButton.setImageResource(
-                    if (isPlaying) R.drawable.baseline_pause_24 else R.drawable.baseline_play_arrow_24
-                )
-                // Ensure proper accessibility description
-                playPauseButton.contentDescription = if (isPlaying) "Pause" else "Play"
-            }
-        }
+        // Observe playing state to update UI
+        playerController.isPlaying.observe(viewLifecycleOwner, Observer { isPlaying ->
+            playPauseButton.setImageResource(
+                if (isPlaying) R.drawable.baseline_pause_24 else R.drawable.baseline_play_arrow_24
+            )
+            // Ensure proper accessibility description
+            playPauseButton.contentDescription = if (isPlaying) "Pause" else "Play"
+        })
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            mediaManager.duration.collectLatest { duration ->
-                if (duration > 0) {
-                    progressBar.max = duration.toInt()
-                    totalTime.text = mediaManager.formatTime(duration)
-                }
+        // Observe duration changes
+        playerController.duration.observe(viewLifecycleOwner, Observer { duration ->
+            if (duration > 0) {
+                progressBar.max = duration.toInt()
+                totalTime.text = formatTime(duration)
             }
-        }
+        })
 
+        // Observe position changes
+        playerController.currentPosition.observe(viewLifecycleOwner, Observer { position ->
+            if (!userIsSeeking) {
+                progressBar.progress = position.toInt()
+                currentTime.text = formatTime(position)
+            }
+        })
+
+        // Observe current item for metadata
+        playerController.currentItem.observe(viewLifecycleOwner, Observer { audioItem ->
+            audioItem?.let {
+                titleText.text = it.title
+                loadAlbumArt(it.albumArtUrl)
+            }
+        })
+
+        // Start position update job - this ensures smooth progress bar updates
+        startProgressUpdateJob()
+    }
+    
+    private fun startProgressUpdateJob() {
+        progressUpdateJob?.cancel()
         progressUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
                 try {
-                    mediaManager.updateProgress()
-                    delay(1000) // Update every second
+                    // This just triggers UI updates between position changes from the service
+                    if (!userIsSeeking) {
+                        playerController.currentPosition.value?.let { position ->
+                            progressBar.progress = position.toInt()
+                        }
+                    }
+                    delay(200) // Update 5 times per second for smoother progress
                 } catch (e: Exception) {
                     Log.e("PlayerDetailFragment", "Error updating progress", e)
-                    delay(1000) // Still delay on error
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            mediaManager.currentPosition.collectLatest { position ->
-                try {
-                    if (!userIsSeeking) {
-                        progressBar.progress = position.toInt()
-                        currentTime.text = mediaManager.formatTime(position)
-                    }
-                } catch (e: Exception) {
-                    Log.e("PlayerDetailFragment", "Error updating UI position", e)
-                }
-            }
-        }
-
-        // Observe artwork changes
-        viewLifecycleOwner.lifecycleScope.launch {
-            mediaManager.currentArtwork.collectLatest { artworkUrl ->
-                if (artworkUrl != null) {
-                    loadAlbumArt(artworkUrl)
+                    delay(1000) // Longer delay on error
                 }
             }
         }
@@ -257,5 +244,12 @@ class PlayerDetailFragment : Fragment() {
             Log.e("PlayerDetailFragment", "Error loading album art", e)
             albumArt.setImageResource(R.drawable.placeholder_image)
         }
+    }
+    
+    private fun formatTime(timeMs: Long): String {
+        val totalSeconds = timeMs / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
     }
 }
