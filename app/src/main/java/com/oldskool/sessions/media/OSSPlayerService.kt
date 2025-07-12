@@ -35,6 +35,9 @@ import com.oldskool.sessions.models.AudioItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -361,11 +364,19 @@ class OSSPlayerService : MediaLibraryService() {
         }
     }
 
+    private var positionTrackingJob: Job? = null
+
     private fun startPositionTracking() {
-        serviceScope.launch {
-            while (_isPlaying.value) {
-                _currentPosition.value = player.currentPosition
-                kotlinx.coroutines.delay(500) // Update every half second
+        // Cancel any existing tracking job first
+        positionTrackingJob?.cancel()
+        
+        // Start a new tracking job
+        positionTrackingJob = serviceScope.launch {
+            while (isActive) {  // This keeps the coroutine alive until canceled
+                if (_isPlaying.value) {  // Check playback state on each iteration
+                    _currentPosition.value = player.currentPosition
+                }
+                delay(500) // Update every half second
             }
         }
     }

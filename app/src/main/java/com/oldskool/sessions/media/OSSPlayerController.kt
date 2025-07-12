@@ -61,6 +61,8 @@ class OSSPlayerController(private val context: Context) : DefaultLifecycleObserv
     
     private val _currentItem = MutableLiveData<AudioItem?>()
     val currentItem: LiveData<AudioItem?> get() = _currentItem
+
+    fun getCurrentPosition(): Long = mediaController?.currentPosition ?: 0L
     
     // Connect to the service when initialized
     init {

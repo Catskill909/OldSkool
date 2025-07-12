@@ -71,7 +71,7 @@ class PlayerDetailFragmentMedia3 : Fragment() {
             totalTime.text = "--:--"
 
             // Initialize PlayerController - this is our ONE AUDIO TRUTH controller
-            playerController = OSSPlayerController.getInstance(requireContext())
+            playerController = OSSPlayerController.getInstance(requireContext().applicationContext)
             
             // Register this fragment with the lifecycle owner so the controller can respond to lifecycle events
             lifecycle.addObserver(playerController)
@@ -211,16 +211,15 @@ class PlayerDetailFragmentMedia3 : Fragment() {
         progressUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
                 try {
-                    // This just triggers UI updates between position changes from the service
-                    if (!userIsSeeking) {
-                        playerController.currentPosition.value?.let { position ->
-                            progressBar.progress = position.toInt()
-                        }
+                    if (!userIsSeeking && playerController.isPlaying.value == true) {
+                        val currentPos = playerController.getCurrentPosition()
+                        progressBar.progress = currentPos.toInt()
+                        currentTime.text = formatTime(currentPos)
                     }
-                    delay(200) // Update 5 times per second for smoother progress
+                    delay(200)
                 } catch (e: Exception) {
                     Log.e("PlayerDetailFragment", "Error updating progress", e)
-                    delay(1000) // Longer delay on error
+                    delay(1000)
                 }
             }
         }

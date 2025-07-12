@@ -66,7 +66,7 @@ class PlayerDetailFragment : Fragment() {
             totalTime.text = "--:--"
 
             // Initialize MediaManager
-            mediaManager = OSSMediaManager.getInstance(requireContext())
+            mediaManager = OSSMediaManager.getInstance(requireContext().applicationContext)
 
             setupClickListeners()
             setupProgressBar()
