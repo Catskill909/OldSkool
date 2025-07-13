@@ -18,6 +18,7 @@ import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.media.app.NotificationCompat.MediaStyle
+import androidx.palette.graphics.Palette
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -373,6 +374,27 @@ class OSSPlayerService : MediaLibraryService() {
         }
     }
 
+    /**
+     * Extract a simple dominant color from artwork for notification theming
+     * Non-blocking, minimal approach that doesn't change architecture
+     */
+    private fun extractNotificationColor(bitmap: Bitmap?): Int {
+        if (bitmap == null) return Color.parseColor("#424242") // Default dark gray
+        
+        return try {
+            val palette = Palette.from(bitmap).generate()
+            // Get the most suitable color for notification background
+            palette.darkVibrantSwatch?.rgb
+                ?: palette.vibrantSwatch?.rgb
+                ?: palette.darkMutedSwatch?.rgb
+                ?: palette.dominantSwatch?.rgb
+                ?: Color.parseColor("#424242") // Fallback
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not extract color from artwork", e)
+            Color.parseColor("#424242") // Safe fallback
+        }
+    }
+
     @OptIn(UnstableApi::class)
     override fun onUpdateNotification(session: MediaSession) {
         try {
@@ -393,15 +415,35 @@ class OSSPlayerService : MediaLibraryService() {
             Log.d(TAG, "Artwork dimensions: ${artworkBitmap.width}x${artworkBitmap.height}")
         }
         
-        // Build a media notification with large icon
+        // Create content intent to bring app to foreground when notification is tapped
+        val contentIntent = Intent(this, com.oldskool.sessions.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val contentPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            contentIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        // Extract color from artwork for notification theming
+        val notificationColor = extractNotificationColor(artworkBitmap)
+        Log.d(TAG, "Using notification color: ${String.format("#%06X", 0xFFFFFF and notificationColor)}")
+        
+        // Build a media notification with large icon and palette-based coloring
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.baseline_play_arrow_24)
             .setLargeIcon(artworkBitmap) // *** THIS IS THE CRITICAL FIX ***
             .setContentTitle(_currentItem.value?.title ?: "Playing")
             .setContentText(_currentItem.value?.artist ?: "Old Skool Sessions")
+            .setContentIntent(contentPendingIntent) // *** TAP TO OPEN APP ***
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(_isPlaying.value)
+            .setColor(notificationColor) // *** PALETTE-BASED COLOR ***
+            .setColorized(true) // *** ENABLE NOTIFICATION COLORING ***
         
         // Create a media style notification
         val mediaStyle = MediaStyle()
