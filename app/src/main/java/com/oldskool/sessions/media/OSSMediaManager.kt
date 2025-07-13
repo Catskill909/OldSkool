@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.Drawable
 import android.media.MediaPlayer
 import android.os.IBinder
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.lang.ref.WeakReference
+
+// Fallback helper is no longer needed; fallback handled in OSSMediaService.kt notification builder.
 
 class OSSMediaManager private constructor(context: Context) {
     private val contextRef = WeakReference(context.applicationContext)
@@ -130,6 +133,7 @@ class OSSMediaManager private constructor(context: Context) {
     private fun loadArtwork(artworkUrl: String?, callback: (Bitmap?) -> Unit, retryCount: Int = 3) {
         if (artworkUrl == null) {
             Log.d("OSSMediaManager", "No artwork URL provided")
+            Log.d("OSSMediaManager", "Using default placeholder artwork fallback")
             callback(null)
             return
         }
@@ -148,31 +152,39 @@ class OSSMediaManager private constructor(context: Context) {
                         }
                         
                         override fun onLoadCleared(placeholder: Drawable?) {
-                            Log.d("OSSMediaManager", "Artwork load cleared")
+                            Log.d("OSSMediaManager_TRACE", "3b. Glide onLoadCleared. Artwork load cleared")
+                            Log.d("OSSMediaManager", "Using default placeholder artwork fallback")
                             callback(null)
                         }
                         
                         override fun onLoadFailed(errorDrawable: Drawable?) {
-                            Log.e("OSSMediaManager", "Artwork load failed")
+                            Log.e("OSSMediaManager_TRACE", "3b. Glide onLoadFailed. Artwork download FAILED for $artworkUrl")
+                            // Even if artwork fails, we should proceed with audio playback.
+                            // The notification will use the fallback icon.
+                            cachedArtwork = null // Ensure no stale artwork is used
+                            callback(null)
                             if (retryCount > 0) {
-                                Log.d("OSSMediaManager", "Retrying artwork load (${retryCount - 1} attempts left)")
+                                Log.d("OSSMediaManager_TRACE", "Retrying artwork load (${retryCount - 1} attempts left)")
                                 loadArtwork(artworkUrl, callback, retryCount - 1)
                             } else {
                                 Log.e("OSSMediaManager", "All artwork load retries exhausted")
+                                Log.d("OSSMediaManager", "Using default placeholder artwork fallback")
                                 callback(null)
                             }
                         }
                     })
             } ?: run {
                 Log.e("OSSMediaManager", "Context reference is null")
+                Log.d("OSSMediaManager_TRACE", "2. Context reference is null. Using default placeholder artwork fallback")
                 callback(null)
             }
         } catch (e: Exception) {
             Log.e("OSSMediaManager", "Error loading artwork", e)
             if (retryCount > 0) {
-                Log.d("OSSMediaManager", "Retrying after error (${retryCount - 1} attempts left)")
+                Log.d("OSSMediaManager_TRACE", "Retrying after error (${retryCount - 1} attempts left)")
                 loadArtwork(artworkUrl, callback, retryCount - 1)
             } else {
+                Log.d("OSSMediaManager_TRACE", "All retries exhausted. Using default placeholder artwork fallback")
                 callback(null)
             }
         }
@@ -207,100 +219,98 @@ class OSSMediaManager private constructor(context: Context) {
     }
 
     fun prepareAudio(url: String, title: String, artworkUrl: String?, sourceFragmentId: Int) {
+        Log.d("OSSMediaManager_TRACE", "1. prepareAudio START. URL: $url")
         this.sourceFragmentId = sourceFragmentId
         Log.d("OSSMediaManager", "=== Track Change ===")
         Log.d("OSSMediaManager", "Preparing new audio track - Title: $title")
-        
-        // Clean up previous track without destroying the media session
+
         cleanupCurrentTrack()
+
         try {
-            // Release any existing player
-            Log.d("OSSMediaManager", "=== Track Change Lifecycle ===")
-            Log.d("OSSMediaManager", "1. Releasing previous player")
-            mediaPlayer?.release()
-            mediaPlayer = null
-            
-            // Create and prepare new player first
-            Log.d("OSSMediaManager", "2. Creating new player instance")
+            Log.d("OSSMediaManager_TRACE", "1. Creating new player instance")
             mediaPlayer = MediaPlayer().apply {
                 setWakeMode(contextRef.get(), PowerManager.PARTIAL_WAKE_LOCK)
                 setDataSource(url)
-                setOnPreparedListener {
-                    Log.d("OSSMediaManager", "3. Media prepared")
-                    _duration.value = duration.toLong()
-                    
-                    // Initialize metadata state immediately
-                    Log.d("OSSMediaManager", "4. Initializing metadata state")
-                    Log.d("OSSMediaManager", "Previous metadata state - Title: $cachedTitle, HasArtwork: ${cachedArtwork != null}")
+
+                setOnPreparedListener { preparedPlayer ->
+                    Log.d("OSSMediaManager_TRACE", "2. Media prepared")
+                    _duration.value = preparedPlayer.duration.toLong()
+
+                    // Set initial metadata without artwork
                     cachedTitle = title
-                    _currentTitle.value = title
-                    _currentArtwork.value = artworkUrl
-                    
-                    // Initial metadata update without artwork
-                    updateMediaSessionMetadata()
-                    
-                    // Load and update artwork asynchronously
-                    Log.d("OSSMediaManager", "5. Starting artwork load for URL: $artworkUrl")
+                    cachedArtwork = null
+                    updateMediaSessionMetadata() // Update session with title first
+
+                    // Set initial playback state to paused
+                    mediaService?.updatePlaybackState(PlaybackStateCompat.STATE_PAUSED, 0L)
+
+                    // Now, load the artwork asynchronously
+                    Log.d("OSSMediaManager_TRACE", "3. Starting artwork load for URL: $artworkUrl")
                     loadArtwork(artworkUrl, { bitmap ->
-                        Log.d("OSSMediaManager", "6. Artwork load complete - Success: ${bitmap != null}")
-                        cachedArtwork = bitmap
-                        
-                        mediaService?.let { service ->
-                            Log.d("OSSMediaManager", "7. Updating media session with complete metadata")
-                            // Ensure complete metadata update with artwork
-                            updateMediaSessionMetadata()
-                            Log.d("OSSMediaManager", "8. Setting initial playback state")
-                            service.updatePlaybackState(
-                                PlaybackStateCompat.STATE_PAUSED,
-                                0L
-                            )
-                            Log.d("OSSMediaManager", "9. Track initialization complete")
-                        } ?: run {
-                            Log.e("OSSMediaManager", "MediaService null during prepare, queueing update")
-                            pendingMetadataUpdate = true
+                        Log.d("OSSMediaManager_TRACE", "4. Artwork load complete. Updating metadata...")
+                        // Sanitize the bitmap to a mutable, standard format
+                        val mutableBitmap = bitmap?.copy(Bitmap.Config.ARGB_8888, true)
+                        if (mutableBitmap != null) {
+                            Log.d("OSSMediaManager_TRACE", "4. Artwork load complete. SANITIZED artwork. New size: ${mutableBitmap.width}x${mutableBitmap.height}")
+                        } else {
+                            Log.w("OSSMediaManager", "Artwork bitmap was null after load.")
                         }
-                    }, 3)
-                }
-                setOnCompletionListener {
-                    Log.d("OSSMediaManager", "Playback completed")
-                    try {
-                        _isPlaying.value = false
-                        seekTo(0) // Reset MediaPlayer position first
-                        _currentPosition.value = 0
-                        mediaService?.updatePlaybackState(
-                            PlaybackStateCompat.STATE_STOPPED,
-                            0L
-                        )
-                    } catch (e: Exception) {
-                        Log.e("OSSMediaManager", "Error updating state on completion", e)
+                        cachedArtwork = mutableBitmap
+                        mediaService?.let { service ->
+                            Log.d("OSSMediaManager_TRACE", "5. Updating media session with artwork")
+                            updateMediaSessionMetadata() // Update again with artwork
+                            
+                            // CRITICAL FIX: Send the direct artwork to the service using the same path as player view
+                            Log.d("OSSMediaManager_TRACE", "5b. Setting DIRECT artwork on service, bypassing MediaSession")
+                            service.setDirectArtwork(mutableBitmap)
+
+                            // --- FORCE NOTIFICATION REBUILD WITH NEW ARTWORK ---
+                            val state = service.mediaSession.controller.playbackState
+                            val metadata = service.mediaSession.controller.metadata
+                            if (state != null && metadata != null) {
+                                Log.d("OSSMediaManager_TRACE", "6. Forcing notification rebuild with artwork: ${bitmap != null}")
+                                val notification = service.createNotification(metadata, state)
+                                service.notificationManager.notify(OSSMediaService.NOTIFICATION_ID, notification)
+                            }
+                    } ?: run {
+                        Log.e("OSSMediaManager", "MediaService null, queueing metadata update")
+                        pendingMetadataUpdate = true
                     }
+                    })
                 }
-                setOnErrorListener { _, what, extra ->
-                    Log.e("OSSMediaManager", "Media player error: what=$what extra=$extra")
+
+                setOnCompletionListener {
+                    Log.d("OSSMediaManager_TRACE", "7. Media playback completed")
                     _isPlaying.value = false
-                    mediaService?.updatePlaybackState(
-                        PlaybackStateCompat.STATE_ERROR,
-                        0L
-                    )
-                    true
+                    mediaService?.updatePlaybackState(PlaybackStateCompat.STATE_STOPPED, 0L)
                 }
+
+                setOnErrorListener { _, what, extra ->
+                    Log.e("OSSMediaManager_TRACE", "8. MediaPlayer Error: what=$what, extra=$extra")
+                    _isPlaying.value = false
+                    mediaService?.updatePlaybackState(PlaybackStateCompat.STATE_ERROR, 0L)
+                    true // Indicates we've handled the error
+                }
+
+                Log.d("OSSMediaManager_TRACE", "9. Preparing player asynchronously")
                 prepareAsync()
             }
-            
+
+            // Update UI-facing state immediately
             _currentTitle.value = title
             _currentArtwork.value = artworkUrl
-        } catch (e: Exception) {
-            Log.e("OSSMediaManager", "Error preparing audio", e)
+            _currentPosition.value = 0
             _isPlaying.value = false
-            mediaService?.updatePlaybackState(
-                PlaybackStateCompat.STATE_ERROR,
-                0L
-            )
+
+        } catch (e: Exception) {
+            Log.e("OSSMediaManager_TRACE", "Error preparing audio", e)
+            _isPlaying.value = false
+            mediaService?.updatePlaybackState(PlaybackStateCompat.STATE_ERROR, 0L)
         }
     }
 
     fun togglePlayPause() {
-        Log.d("OSSMediaManager", "Toggle play/pause")
+        Log.d("OSSMediaManager_TRACE", "togglePlayPause START")
         try {
             val player = mediaPlayer
             if (player == null) {
@@ -309,7 +319,7 @@ class OSSMediaManager private constructor(context: Context) {
             }
             
             if (!player.isPlaying) {
-                Log.d("OSSMediaManager", "Starting playback")
+                Log.d("OSSMediaManager_TRACE", "Starting playback")
                 // Ensure metadata is synchronized before state change
                 ensureMetadataSync()
                 
@@ -328,7 +338,7 @@ class OSSMediaManager private constructor(context: Context) {
                     pendingMetadataUpdate = true
                 }
             } else {
-                Log.d("OSSMediaManager", "Pausing playback")
+                Log.d("OSSMediaManager_TRACE", "Pausing playback")
                 player.pause()
                 _isPlaying.value = false
                 
@@ -345,7 +355,7 @@ class OSSMediaManager private constructor(context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Log.e("OSSMediaManager", "Error toggling play/pause", e)
+            Log.e("OSSMediaManager_TRACE", "Error toggling play/pause", e)
             _isPlaying.value = false
             mediaService?.updatePlaybackState(
                 PlaybackStateCompat.STATE_ERROR,
@@ -372,36 +382,37 @@ class OSSMediaManager private constructor(context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Log.e("OSSMediaManager", "Error updating progress", e)
+            Log.e("OSSMediaManager_TRACE", "Error updating progress", e)
         }
     }
 
     private fun updateMediaSessionMetadata() {
         try {
-            Log.d("OSSMediaManager", "=== Media Session Update ===")
-            Log.d("OSSMediaManager", "Updating media session metadata - Title: $cachedTitle")
-            Log.d("OSSMediaManager", "MediaService available: ${mediaService != null}")
-            Log.d("OSSMediaManager", "Pending update: $pendingMetadataUpdate")
+            Log.d("OSSMediaManager_TRACE", "updateMediaSessionMetadata START")
+            Log.d("OSSMediaManager_TRACE", "Updating media session metadata - Title: $cachedTitle")
+            Log.d("OSSMediaManager_TRACE", "MediaService available: ${mediaService != null}")
+            Log.d("OSSMediaManager_TRACE", "Pending update: $pendingMetadataUpdate")
             
             // Validate metadata state
             if (cachedTitle == null && cachedArtwork == null) {
-                Log.w("OSSMediaManager", "Attempting to update with null metadata")
+                Log.w("OSSMediaManager_TRACE", "Attempting to update with null metadata")
                 return
             }
             
             mediaService?.let { service ->
+                Log.d("OSSMediaManager_TRACE", "4. updateMediaSessionMetadata called. Notifying service.")
                 service.updateMetadata(
                     cachedTitle ?: "",
                     "Old Skool Sessions",
                     cachedArtwork
                 )
-                Log.d("OSSMediaManager", "Media session metadata updated successfully")
+                Log.d("OSSMediaManager_TRACE", "5. Media session metadata updated successfully")
             } ?: run {
-                Log.e("OSSMediaManager", "Failed to update metadata: MediaService is null")
+                Log.e("OSSMediaManager_TRACE", "Failed to update metadata: MediaService is null")
                 pendingMetadataUpdate = true
             }
         } catch (e: Exception) {
-            Log.e("OSSMediaManager", "Error updating media session metadata", e)
+            Log.e("OSSMediaManager_TRACE", "Error updating media session metadata", e)
             pendingMetadataUpdate = true
         }
     }

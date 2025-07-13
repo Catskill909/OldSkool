@@ -7,6 +7,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -72,6 +75,10 @@ class OSSPlayerService : MediaLibraryService() {
 
     private val _currentItem = MutableStateFlow<AudioItem?>(null)
     val currentItem: StateFlow<AudioItem?> = _currentItem
+
+    // Artwork caching for notifications
+    private var cachedArtwork: Bitmap? = null
+    private var currentArtworkUrl: String? = null
 
     companion object {
         private const val TAG = "OSSPlayerService"
@@ -187,8 +194,8 @@ class OSSPlayerService : MediaLibraryService() {
                 player.prepare()
                 player.playWhenReady = true  // Set to auto-play when ready
                 
-                // Update album art for notification
-                loadArtwork(item.albumArtUrl)
+                // Load and cache artwork for notification
+                loadAndCacheArtwork(item.albumArtUrl)
             } catch (e: Exception) {
                 Log.e(TAG, "Error playing audio", e)
             }
@@ -211,8 +218,8 @@ class OSSPlayerService : MediaLibraryService() {
                 player.prepare()
                 player.playWhenReady = false  // Explicitly set not to play when ready
                 
-                // Update album art for notification
-                loadArtwork(item.albumArtUrl)
+                // Load and cache artwork for notification
+                loadAndCacheArtwork(item.albumArtUrl)
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading audio", e)
             }
@@ -272,6 +279,100 @@ class OSSPlayerService : MediaLibraryService() {
         }
     }
 
+    /**
+     * Optimize bitmap for notification display - critical for consistent notification tray images
+     */
+    private fun optimizeBitmapForNotification(bitmap: Bitmap): Bitmap? {
+        return try {
+            // Calculate optimal size for notification large icon
+            val displayMetrics = resources.displayMetrics
+            val density = displayMetrics.density
+            
+            // Standard notification large icon size (64dp converted to pixels)
+            val targetSize = (64 * density).toInt()
+            
+            // Create scaled bitmap
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true)
+            
+            // Create optimized bitmap with ARGB_8888 configuration (required by many devices)
+            val optimizedBitmap = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(optimizedBitmap)
+            
+            // Fill with solid background to avoid transparency issues
+            canvas.drawColor(Color.BLACK)
+            canvas.drawBitmap(scaledBitmap, 0f, 0f, null)
+            
+            Log.d(TAG, "Optimized artwork for notification: ${optimizedBitmap.width}x${optimizedBitmap.height}")
+            optimizedBitmap
+        } catch (e: Exception) {
+            Log.e(TAG, "Error optimizing bitmap for notification", e)
+            bitmap // Return original as fallback
+        }
+    }
+
+    /**
+     * Get fallback artwork (app icon) when image loading fails
+     */
+    private fun getFallbackArtwork(): Bitmap? {
+        return try {
+            val drawable = ContextCompat.getDrawable(this, R.mipmap.ic_launcher)
+            drawable?.let {
+                val bitmap = Bitmap.createBitmap(
+                    it.intrinsicWidth,
+                    it.intrinsicHeight,
+                    Bitmap.Config.ARGB_8888
+                )
+                val canvas = Canvas(bitmap)
+                it.setBounds(0, 0, canvas.width, canvas.height)
+                it.draw(canvas)
+                optimizeBitmapForNotification(bitmap)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating fallback artwork", e)
+            null
+        }
+    }
+
+    /**
+     * Load and cache artwork for notification display
+     */
+    private fun loadAndCacheArtwork(artworkUrl: String?) {
+        // Skip if we already have this artwork cached
+        if (artworkUrl == currentArtworkUrl && cachedArtwork != null) {
+            Log.d(TAG, "Using cached artwork for: $artworkUrl")
+            return
+        }
+
+        serviceScope.launch {
+            try {
+                Log.d(TAG, "Loading artwork: $artworkUrl")
+                val bitmap = loadArtwork(artworkUrl)
+                
+                if (bitmap != null) {
+                    // Optimize bitmap for notification display
+                    cachedArtwork = optimizeBitmapForNotification(bitmap)
+                    currentArtworkUrl = artworkUrl
+                    Log.d(TAG, "Artwork loaded and cached successfully")
+                } else {
+                    // Use fallback artwork
+                    cachedArtwork = getFallbackArtwork()
+                    currentArtworkUrl = null
+                    Log.d(TAG, "Using fallback artwork")
+                }
+                
+                // Force notification update with new artwork
+                onUpdateNotification(mediaSession)
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading and caching artwork", e)
+                // Use fallback artwork on error
+                cachedArtwork = getFallbackArtwork()
+                currentArtworkUrl = null
+                onUpdateNotification(mediaSession)
+            }
+        }
+    }
+
     @OptIn(UnstableApi::class)
     override fun onUpdateNotification(session: MediaSession) {
         try {
@@ -284,28 +385,37 @@ class OSSPlayerService : MediaLibraryService() {
 
     @OptIn(UnstableApi::class)
     private fun buildNotification(mediaSession: MediaSession): Notification {
-        // Build a simple notification using MediaStyle
+        // Get the artwork for the large icon - this is the critical fix!
+        val artworkBitmap = cachedArtwork ?: getFallbackArtwork()
+        
+        Log.d(TAG, "Building notification with artwork: ${artworkBitmap != null}")
+        if (artworkBitmap != null) {
+            Log.d(TAG, "Artwork dimensions: ${artworkBitmap.width}x${artworkBitmap.height}")
+        }
+        
+        // Build a media notification with large icon
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.baseline_play_arrow_24) // Using an existing play icon
+            .setSmallIcon(R.drawable.baseline_play_arrow_24)
+            .setLargeIcon(artworkBitmap) // *** THIS IS THE CRITICAL FIX ***
             .setContentTitle(_currentItem.value?.title ?: "Playing")
-            .setContentText(_currentItem.value?.artist ?: "")
+            .setContentText(_currentItem.value?.artist ?: "Old Skool Sessions")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(_isPlaying.value)
         
-        // Create a media style notification (without setting the token)
+        // Create a media style notification
         val mediaStyle = MediaStyle()
             .setShowActionsInCompactView(0, 1) // Show play/pause button in compact view
         
         // Add play/pause action
-        val playPauseIcon = if (_isPlaying.value) 
+        val playPauseIcon = if (_isPlaying.value)
             R.drawable.baseline_pause_24 else R.drawable.baseline_play_arrow_24
         val playPauseAction = NotificationCompat.Action(
             playPauseIcon,
             if (_isPlaying.value) "Pause" else "Play",
             PendingIntent.getService(
-                this, 
-                0, 
+                this,
+                0,
                 Intent(this, OSSPlayerService::class.java).setAction(ACTION_TOGGLE_PLAYBACK),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -316,8 +426,8 @@ class OSSPlayerService : MediaLibraryService() {
             R.drawable.baseline_stop_24,
             "Stop",
             PendingIntent.getService(
-                this, 
-                0, 
+                this,
+                0,
                 Intent(this, OSSPlayerService::class.java).setAction(ACTION_STOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -417,6 +527,11 @@ class OSSPlayerService : MediaLibraryService() {
         // Make sure to remove notifications
         notificationManager.cancel(NOTIFICATION_ID)
         stopForeground(true)
+        
+        // Clean up artwork cache
+        cachedArtwork?.recycle()
+        cachedArtwork = null
+        currentArtworkUrl = null
         
         // Release media session
         mediaSession.release()

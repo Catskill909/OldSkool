@@ -49,9 +49,11 @@ class PlayerDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d("PlayerDetailFragment_TRACE", "1. onViewCreated START")
 
         try {
             // Initialize UI components
+            Log.d("PlayerDetailFragment_TRACE", "2. Initializing UI components...")
             backButton = view.findViewById(R.id.backButton)
             albumArt = view.findViewById(R.id.albumArt)
             titleText = view.findViewById(R.id.titleText)
@@ -66,36 +68,42 @@ class PlayerDetailFragment : Fragment() {
             totalTime.text = "--:--"
 
             // Initialize MediaManager
+            Log.d("PlayerDetailFragment_TRACE", "3. Initializing MediaManager...")
             mediaManager = OSSMediaManager.getInstance(requireContext().applicationContext)
+            Log.d("PlayerDetailFragment_TRACE", "3. MediaManager instance obtained.")
 
+            Log.d("PlayerDetailFragment_TRACE", "4. Setting up listeners and observers...")
             setupClickListeners()
             setupProgressBar()
             setupObservers()
 
-            // Get arguments using the proper type constraint
+            Log.d("PlayerDetailFragment_TRACE", "5. Getting navigation arguments...")
             val args = try {
                 val navArgs: PlayerDetailFragmentArgs by navArgs()
                 navArgs
             } catch (e: Exception) {
-                Log.e("PlayerDetailFragment", "Failed to get arguments: ${e.message}")
+                Log.e("PlayerDetailFragment_TRACE", "CRITICAL FAILURE: Failed to get navigation arguments: ${e.message}")
                 findNavController().navigateUp()
                 return
             }
 
+            Log.d("PlayerDetailFragment_TRACE", "6. Navigation arguments obtained successfully. Title: ${args.title}")
             // Set initial state and prepare audio
             titleText.text = args.title
             loadAlbumArt(args.imageUrl)
+            Log.d("PlayerDetailFragment_TRACE", "7. Initial UI state set.")
 
-            Log.d("PlayerDetailFragment", "Preparing audio with URL: ${args.audioUrl}")
+            Log.d("PlayerDetailFragment_TRACE", "8. Calling mediaManager.prepareAudio...")
             mediaManager.prepareAudio(
                 url = args.audioUrl,
                 title = args.title,
                 artworkUrl = args.imageUrl,
                 sourceFragmentId = R.id.navigation_player_detail
             )
-
             // Observe media manager state
-            observePlaybackState()
+            Log.d("PlayerDetailFragment_TRACE", "9. observePlaybackState called.")
+        observePlaybackState()
+        Log.d("PlayerDetailFragment_TRACE", "10. onViewCreated FINISH")
         } catch (e: Exception) {
             Log.e("PlayerDetailFragment", "Error in onViewCreated: ${e.message}")
             findNavController().navigateUp()

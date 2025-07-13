@@ -49,6 +49,46 @@ private val mediaSessionCallback = object : MediaSessionCompat.Callback() {
     override fun onPause() {
         // Handle pause command
     }
+
+    override fun onStop() {
+        // Handle stop command
+    }
+}
+```
+
+## Known Issues & Limitations
+
+### 1. Notification Tray Image Failure
+Persistent issue with notification tray images not displaying on Samsung SM-S737TL running Android 8.1, despite:
+
+- Image displays correctly in app player and lock screen
+- Metadata and controls work properly in notification
+- Multiple bitmap handling approaches have been tried:
+  - Direct usage from MediaMetadataCompat
+  - Manual bitmap sanitization and scaling
+  - Density-aware bitmap optimization
+  - Reverting to previously working implementation from git history
+
+**Root Cause Analysis:** The most likely cause is Samsung-specific notification handling requirements or system-level constraints that prevent images from displaying in the notification tray while allowing them on the lock screen. See complete analysis in `image-notification-tray.md`.
+
+**Latest Finding (Critical):** Despite tracing and directly reusing the exact same image pathway that works correctly for the player view and lock screen controls, the notification tray image still fails to appear. This confirms the issue is extremely persistent and appears to be related to something fundamental about how this specific device handles notification tray images versus lock screen media controls.
+
+### 2. PendingIntent and Task Stack Issues
+
+**Issue:** When launching the app from a notification, improper task stacking can occur if `Intent.FLAG_ACTIVITY_NEW_TASK` is not added to the PendingIntent.
+
+**Solution:** Always include this flag to prevent service crashes and maintain proper app state:
+```kotlin
+val contentIntent = Intent(this, MainActivity::class.java).apply {
+    // Add this flag to ensure proper task stack
+    flags = Intent.FLAG_ACTIVITY_NEW_TASK 
+           | Intent.FLAG_ACTIVITY_SINGLE_TOP 
+           | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+}
+```
+
+**Impact:** Fixes service crashes when launching from notification, but does not resolve the notification tray image issue.
+    }
     
     override fun onSeekTo(pos: Long) {
         // Handle seeking
